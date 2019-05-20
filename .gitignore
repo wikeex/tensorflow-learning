@@ -82,6 +82,8 @@ celerybeat-schedule
 *.sage.py
 
 # Environments
+.DS_Store
+.idea/
 .env
 .venv
 env/
@@ -102,3 +104,15 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# config
+config.py
+
+# database file
+*.sqlite3
+
+# data sets
+datasets/
+
+# model
+model/
