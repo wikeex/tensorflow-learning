@@ -1,0 +1,5 @@
+In iteration: 1
+After 0 steps, perplexity is 9971.440
+After 100 steps, perplexity is 1457.033
+After 200 steps, perplexity is 1084.044
+In iteration: 1
