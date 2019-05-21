@@ -1,6 +1,5 @@
 import tensorflow as tf
-import speech_data
-
+from sound_lstm_test import data
 
 batch_size = 10
 
@@ -48,13 +47,12 @@ loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=y_, logi
 grads_conv1, _ = tf.clip_by_global_norm(tf.gradients(loss, conv1_variable), clip_norm=5)
 grads_conv2, _ = tf.clip_by_global_norm(tf.gradients(loss, conv2_variable), clip_norm=5)
 grads_fc1, _ = tf.clip_by_global_norm(tf.gradients(loss, fc1_variable), clip_norm=5)
-grads_fc2, _ = tf.clip_by_global_norm(tf.gradients(loss, fc2_variable), clip_norm=5)
 grads, _ = tf.clip_by_global_norm(tf.gradients(loss, variables), clip_norm=5)
 
-conv1_optimizer = tf.train.AdamOptimizer(0.00005)
-conv2_optimizer = tf.train.AdamOptimizer(0.0001)
+conv1_optimizer = tf.train.AdamOptimizer(0.001)
+conv2_optimizer = tf.train.AdamOptimizer(0.001)
 fc1_optimizer = tf.train.AdamOptimizer(0.001)
-fc2_optimizer = tf.train.AdamOptimizer(0.01)
+fc2_optimizer = tf.train.AdamOptimizer(0.001)
 optimizer = tf.train.AdamOptimizer(0.001)
 
 conv1_op = conv1_optimizer.apply_gradients(zip(grads_conv1, conv1_variable))
@@ -68,8 +66,8 @@ init = tf.global_variables_initializer()
 with tf.Session() as sess:
     sess.run(init)
 
-    train_data = speech_data.np_load(batch_size=10, batch_type='train/')
-    test_data = speech_data.np_load(batch_size=10, batch_type='test/')
+    train_data = data.np_load(batch_size=10, batch_type='train/')
+    test_data = data.np_load(batch_size=10, batch_type='test/')
 
     for i in range(1000):
         for _ in range(100):

@@ -1,0 +1,8 @@
+In iteration: 1
+In iteration: 1
+After 0 steps, accuracy is 0.000
+After 100 steps, accuracy is 0.000
+After 200 steps, accuracy is 0.100
+After 300 steps, accuracy is 0.000
+After 400 steps, accuracy is 0.200
+After 500 steps, accuracy is 0.200

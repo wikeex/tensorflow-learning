@@ -1,14 +1,13 @@
 import tensorflow as tf
-import speech_data
-
+from sound_lstm_test import data
 
 L1_HIDDEN_SIZE = 400
 L2_HIDDEN_SIZE = 200
 batch_size = 10
 epoch_size = 1000
 
-train_data = speech_data.np_load(batch_size=10, batch_type='train/')
-test_data = speech_data.np_load(batch_size=10, batch_type='test/')
+train_data = data.np_load(batch_size=10, batch_type='train/')
+test_data = data.np_load(batch_size=10, batch_type='test/')
 
 x = tf.placeholder(tf.float32, [batch_size, 512, 80])
 y_ = tf.placeholder(tf.float32, [batch_size, 59])

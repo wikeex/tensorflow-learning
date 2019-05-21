@@ -1,6 +1,5 @@
 import tensorflow as tf
-import speech_data
-
+from sound_lstm_test import data
 
 DATA_PATH = 'G:/sound_fixed'
 FEATURES_SIZE = 512
@@ -97,9 +96,9 @@ def run_epoch(session, model, data, train_op, output_log, epoch_size):
 
 
 def main():
-    train_data = speech_data.np_load(10, 'train/')
-    valid_data = speech_data.np_load(1, 'eval/')
-    test_data = speech_data.np_load(1, 'test/')
+    train_data = data.np_load(10, 'train/')
+    valid_data = data.np_load(1, 'eval/')
+    test_data = data.np_load(1, 'test/')
 
     train_epoch_size = 6000
 

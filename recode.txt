@@ -6564,3 +6564,4 @@ After 1100 steps, accuracy is 0.200
 After 1200 steps, accuracy is 0.000
 After 1300 steps, accuracy is 0.000
 After 1400 steps, accuracy is 0.100
+In iteration: 1

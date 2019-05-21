@@ -33,12 +33,12 @@ bird stop marvin two five on off four dog up tree cat bed nine eight left".split
 # TEST_INDEX='test_words_index.txt'
 SOURCE_URL = 'http://pannous.net/files/' #spoken_numbers.tar'
 
-DATA_DIR = 'G:/sound/'
-#DATA_DIR = './datasets/numbers/'
-pcm_path = "G:/sound/" # 8 bit
-#pcm_path = "./datasets/numbers/spoken_numbers_pcm/" # 8 bit
-wav_path = "G:/sound/" # 16 bit s16le
-#wav_path = "./datasets/numbers/" # 16 bit s16le
+#DATA_DIR = 'G:/sound/'
+DATA_DIR = '../datasets/numbers/'
+#pcm_path = "G:/sound/" # 8 bit
+pcm_path = "../datasets/numbers/spoken_numbers_pcm/" # 8 bit
+#wav_path = "G:/sound/" # 16 bit s16le
+wav_path = "../datasets/numbers/" # 16 bit s16le
 path = pcm_path
 CHUNK = 4096
 test_fraction=0.1 # 10% of data for test / verification
