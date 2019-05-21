@@ -7,13 +7,6 @@ NUM_LAYERS = 4
 LEARNING_RATE = 0.001
 KEEP_PROB = 0.5
 
-TRAIN_BATCH_SIZE = 10
-TRAIN_NUM_STEPS = 80
-
-EVAL_BATCH_SIZE = 1
-EVAL_NUM_STEPS = 1
-NUM_EPOCH = 100
-
 
 class SoundTestModel:
     def __init__(self, is_training, batch_size, num_steps):
@@ -45,20 +38,22 @@ class SoundTestModel:
                 rnn_output, state = rnn_net(x[:, step, :], state)
                 outputs.append(rnn_output)
 
-        softmax_weight = tf.get_variable('softmax_weight', [HIDDEN_SIZE, 10])
+        output = tf.reshape(tf.concat(outputs, 1), [-1, HIDDEN_SIZE*num_steps])
+        softmax_weight = tf.get_variable('softmax_weight', [HIDDEN_SIZE*num_steps, 10])
         softmax_bias = tf.get_variable('softmax_bias', [10])
 
-        logits = tf.matmul(rnn_output, softmax_weight) + softmax_bias
+        logits = tf.matmul(output, softmax_weight) + softmax_bias
+        logits_softmax = tf.nn.softmax(logits=logits, axis=1)
 
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=self.y))
 
         self.cost = tf.reduce_sum(loss) / batch_size
         self.final_state = state
 
-        self.correct_prediction = tf.equal(tf.arg_max(self.y, 1), tf.arg_max(logits, 1))
+        self.correct_prediction = tf.equal(tf.arg_max(self.y, 1), tf.arg_max(logits_softmax, 1))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
 
         if not is_training:
             return
 
-        self.optimizer = tf.train.AdamOptimizer(0.001).minimize(loss)
+        self.optimizer = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
