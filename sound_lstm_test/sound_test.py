@@ -39,8 +39,9 @@ def run_epoch(session, model, data, train_op, output_log, epoch_size):
 
 
 def main():
-    train_data = data.mfcc_batch_generator(batch_size=10)
-    valid_data = data.mfcc_batch_generator(batch_size=1)
+    train_data = data.np_load(batch_size=10, batch_type='train/')
+    valid_data = data.np_load(batch_size=10, batch_type='eval/')
+    test_data = data.np_load(batch_size=10, batch_type='test/')
 
     train_epoch_size = 6000
 
@@ -84,7 +85,7 @@ def main():
             if valid_accuracy > best_accuracy:
                 saver.save(session, check_point_path)
 
-        test_accuracy = run_epoch(session, eval_model, valid_data, tf.no_op(), False, test_epoch_size)
+        test_accuracy = run_epoch(session, eval_model, test_data, tf.no_op(), False, test_epoch_size)
         with open('./record.txt', 'a') as f:
             f.write('In iteration: %d\n' % (i + 1))
         print('Test Accuracy: %.3f' % test_accuracy)

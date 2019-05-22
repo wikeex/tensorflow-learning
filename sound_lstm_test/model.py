@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-FEATURES_SIZE = 20
+FEATURES_SIZE = 512
 
 HIDDEN_SIZE = 128
 NUM_LAYERS = 4
@@ -10,8 +10,8 @@ KEEP_PROB = 0.5
 
 class SoundTestModel:
     def __init__(self, is_training, batch_size, num_steps):
-        self.x = tf.placeholder(tf.float32, [batch_size, 20, 80])
-        self.y = tf.placeholder(tf.float32, [batch_size, 10])
+        self.x = tf.placeholder(tf.float32, [batch_size, 512, 80])
+        self.y = tf.placeholder(tf.float32, [batch_size, 59])
 
         x = tf.transpose(self.x, [0, 2, 1])
 
@@ -39,8 +39,8 @@ class SoundTestModel:
                 outputs.append(rnn_output)
 
         output = tf.reshape(tf.concat(outputs, 1), [-1, HIDDEN_SIZE*num_steps])
-        softmax_weight = tf.get_variable('softmax_weight', [HIDDEN_SIZE*num_steps, 10])
-        softmax_bias = tf.get_variable('softmax_bias', [10])
+        softmax_weight = tf.get_variable('softmax_weight', [HIDDEN_SIZE*num_steps, 59])
+        softmax_bias = tf.get_variable('softmax_bias', [59])
 
         logits = tf.matmul(output, softmax_weight) + softmax_bias
         logits_softmax = tf.nn.softmax(logits=logits, axis=1)
