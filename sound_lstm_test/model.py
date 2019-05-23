@@ -1,7 +1,5 @@
 import tensorflow as tf
 
-FEATURES_SIZE = 512
-
 HIDDEN_SIZE = 128
 NUM_LAYERS = 4
 LEARNING_RATE = 0.001
@@ -39,18 +37,24 @@ class SoundTestModel:
                 outputs.append(rnn_output)
 
         output = tf.reshape(tf.concat(outputs, 1), [-1, HIDDEN_SIZE*num_steps])
-        softmax_weight = tf.get_variable('softmax_weight', [HIDDEN_SIZE*num_steps, 59])
+
+        hidden_weight = tf.get_variable('hidden_weight', [HIDDEN_SIZE*num_steps, 800])
+        hidden_bias = tf.get_variable('hidden_bias', [800])
+
+        hidden_output = tf.nn.relu(tf.matmul(output, hidden_weight) + hidden_bias)
+
+        softmax_weight = tf.get_variable('softmax_weight', [800, 59])
         softmax_bias = tf.get_variable('softmax_bias', [59])
 
-        logits = tf.matmul(output, softmax_weight) + softmax_bias
+        logits = tf.matmul(hidden_output, softmax_weight) + softmax_bias
         logits_softmax = tf.nn.softmax(logits=logits, axis=1)
 
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=self.y))
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=self.y))
 
         self.cost = tf.reduce_sum(loss) / batch_size
         self.final_state = state
 
-        self.correct_prediction = tf.equal(tf.arg_max(self.y, 1), tf.arg_max(logits_softmax, 1))
+        self.correct_prediction = tf.equal(tf.math.argmax(self.y, 1), tf.math.argmax(logits_softmax, 1))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
 
         if not is_training:

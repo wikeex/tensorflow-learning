@@ -3,19 +3,13 @@ from sound_lstm_test import data
 from sound_lstm_test.model import SoundTestModel
 
 DATA_PATH = './datasets/numbers'
-FEATURES_SIZE = 20
-
-HIDDEN_SIZE = 128
-NUM_LAYERS = 4
-LEARNING_RATE = 0.001
-KEEP_PROB = 0.5
 
 TRAIN_BATCH_SIZE = 10
 TRAIN_NUM_STEPS = 80
 
-EVAL_BATCH_SIZE = 1
+EVAL_BATCH_SIZE = 10
 EVAL_NUM_STEPS = 80
-NUM_EPOCH = 100
+NUM_EPOCH = 10
 
 
 def run_epoch(session, model, data, train_op, output_log, epoch_size):
