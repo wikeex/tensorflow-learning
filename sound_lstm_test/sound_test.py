@@ -9,7 +9,7 @@ TRAIN_NUM_STEPS = 80
 
 EVAL_BATCH_SIZE = 10
 EVAL_NUM_STEPS = 80
-NUM_EPOCH = 10
+NUM_EPOCH = 50
 
 
 def run_epoch(session, model, data, train_op, output_log, epoch_size):

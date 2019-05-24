@@ -1,9 +1,9 @@
 import tensorflow as tf
 
 HIDDEN_SIZE = 128
-NUM_LAYERS = 4
+NUM_LAYERS = 5
 LEARNING_RATE = 0.001
-KEEP_PROB = 0.5
+KEEP_PROB = 0.8
 
 
 class SoundTestModel:
@@ -38,15 +38,10 @@ class SoundTestModel:
 
         output = tf.reshape(tf.concat(outputs, 1), [-1, HIDDEN_SIZE*num_steps])
 
-        hidden_weight = tf.get_variable('hidden_weight', [HIDDEN_SIZE*num_steps, 800])
-        hidden_bias = tf.get_variable('hidden_bias', [800])
-
-        hidden_output = tf.nn.relu(tf.matmul(output, hidden_weight) + hidden_bias)
-
-        softmax_weight = tf.get_variable('softmax_weight', [800, 59])
+        softmax_weight = tf.get_variable('softmax_weight', [HIDDEN_SIZE*num_steps, 59])
         softmax_bias = tf.get_variable('softmax_bias', [59])
 
-        logits = tf.matmul(hidden_output, softmax_weight) + softmax_bias
+        logits = tf.matmul(output, softmax_weight) + softmax_bias
         logits_softmax = tf.nn.softmax(logits=logits, axis=1)
 
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=self.y))
