@@ -1,31 +1,31 @@
 import tensorflow as tf
 
-HIDDEN_SIZE = 80
+HIDDEN_SIZE = 60
 NUM_LAYERS = 4
 LEARNING_RATE = 0.001
 KEEP_PROB = 0.5
 
 
-class SoundTestModel:
+class SoundWatching:
+
     def __init__(self, is_training, batch_size, num_steps):
-        self.x = tf.placeholder(tf.float32, [batch_size, 512, 80])
-        self.y = tf.placeholder(tf.float32, [batch_size, 59])
+        self.x = tf.placeholder(tf.float32, [-1, 512, 80])
 
         x = tf.transpose(self.x, [0, 2, 1])
 
-        cells = []
+        layer_a = []
 
         for _ in range(NUM_LAYERS):
-            lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(num_units=HIDDEN_SIZE, state_is_tuple=True)
+            lstm_cell_a = tf.nn.rnn_cell.BasicLSTMCell(num_units=HIDDEN_SIZE, state_is_tuple=True)
 
             if is_training:
-                lstm_cell = tf.contrib.rnn.DropoutWrapper(lstm_cell, output_keep_prob=KEEP_PROB)
+                lstm_cell_a = tf.contrib.rnn.DropoutWrapper(lstm_cell_a, output_keep_prob=KEEP_PROB)
 
-            cells.append(lstm_cell)
+                layer_a.append(lstm_cell_a)
 
-        rnn_net = tf.contrib.rnn.MultiRNNCell(cells)
+        rnn_net_a = tf.contrib.rnn.MultiRNNCell(layer_a)
 
-        self.initial_state = rnn_net.zero_state(batch_size, tf.float32)
+        self.initial_state = rnn_net_a.zero_state(batch_size, tf.float32)
 
         outputs = []
         state = self.initial_state
@@ -33,7 +33,7 @@ class SoundTestModel:
             for step in range(num_steps):
                 if step > 0:
                     tf.get_variable_scope().reuse_variables()
-                rnn_output, state = rnn_net(x[:, step, :], state)
+                rnn_output, state = rnn_net_a(x[:, step, :], state)
                 outputs.append(rnn_output)
 
         output = tf.reshape(tf.concat(outputs, 1), [-1, HIDDEN_SIZE*num_steps])
