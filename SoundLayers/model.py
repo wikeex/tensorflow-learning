@@ -31,9 +31,6 @@ class SoundLayers:
                 # rnn层处理0.5s的信息，6个rnn层的输出拼接成3s信息送往LSTM1层
                 for rnn_time_step in range(6):
                     end = tf.placeholder(tf.bool, [1])
-                    if end is True:
-                        rnn_block_output.extend([tf.Variable(tf.zeros([RNN_HIDDENSIZE]) * time_slices)])
-                        continue
 
                     self.x = tf.placeholder(tf.float32, [features, time_slices])
                     self.y = tf.placeholder(tf.float32, [classes])
@@ -64,6 +61,10 @@ class SoundLayers:
                             rnn_layers_outputs.append(output)
 
                     rnn_block_output.extend(rnn_layers_outputs)
+                    if end is True:
+                        rnn_rest = 6 - len(rnn_block_output)
+                        rnn_block_output.extend([tf.Variable(tf.zeros([RNN_HIDDENSIZE])) * time_slices * rnn_rest])
+                        break
 
             rnn_output = tf.reshape(tf.concat(rnn_block_output, axis=0), [-1, RNN_HIDDENSIZE])
 
@@ -88,6 +89,12 @@ class SoundLayers:
                         output, lstm1_state = lstm1_block(rnn_output[step, :], lstm1_state)
                         lstm1_layers_outputs.append(output)
                 lstm1_block_output.extend(lstm1_layers_outputs)
+                if end is True:
+                    lstm1_rest = 3 - len(lstm1_block_output)
+                    rnn_block_output.extend(
+                        [tf.Variable(tf.zeros([LSTM1_HIDDENSIZE])) * rnn_output.shape[0].value * lstm1_rest]
+                    )
+                    break
 
         lstm1_output = tf.reshape(tf.concat(lstm1_block_output, axis=0), [-1, LSTM1_HIDDENSIZE])
 
