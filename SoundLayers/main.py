@@ -1,5 +1,5 @@
 import tensorflow as tf
-from . import data
+from SoundLayers import data
 from SoundLayers.model import SoundLayers
 
 
@@ -8,13 +8,19 @@ NUM_EPOCH = 20
 
 def run_epoch(session, model, data, train_op, output_log, epoch_size):
     total_accuracy = 0.0
-    state = session.run(model.initial_state)
+    rnn_state, lstm1_state, lstm2_state = session.run([model.rnn_init_state, model.lstm1_init_state, model.lstm2_init_state])
 
     for step in range(epoch_size):
         x, y = next(data)
-        cost, state, _, accuracy = session.run(
-            [model.cost, model.final_state, train_op, model.accuracy],
-            {model.x: x, model.y: y, model.initial_state: state}
+        cost, _, accuracy = session.run(
+            [model.cost, train_op, model.accuracy],
+            {
+                model.x: x,
+                model.y: y,
+                model.rnn_init_state: rnn_state,
+                model.lstm1_init_state: lstm1_state,
+                model.lstm2_init_state: lstm2_state
+            }
         )
         total_accuracy += accuracy
 
@@ -42,10 +48,10 @@ def main():
 
     initializer = tf.random_uniform_initializer(-0.05, 0.05)
     with tf.variable_scope('sound_layers_model', reuse=None, initializer=initializer):
-        train_model = SoundLayers(True, time_slices=10, mfcc_features=512)
+        train_model = SoundLayers(True, time_slices=10, mfcc_features=512, classes=59)
 
     with tf.variable_scope('sound_layers_model', reuse=True, initializer=initializer):
-        eval_model = SoundLayers(False, time_slices=10, mfcc_features=512)
+        eval_model = SoundLayers(False, time_slices=10, mfcc_features=512, classes=59)
 
     saver = tf.train.Saver()
 
