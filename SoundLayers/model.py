@@ -35,11 +35,12 @@ class SoundLayers:
                     for rnn_time_step in range(6):
                         if rnn_time_step > 0:
                             tf.get_variable_scope().reuse_variables()
-                        end = tf.placeholder(tf.bool, [1])
+                        self.end = tf.placeholder(tf.bool, [1])
+                        end = self.end
 
                         self.x = tf.placeholder(tf.float32, [features, time_slices])
                         self.y = tf.placeholder(tf.float32, [classes])
-
+                        print(self.x.shape)
                         if rnn_time_step > 1:
                             tf.get_variable_scope().reuse_variables()
 
@@ -93,7 +94,7 @@ class SoundLayers:
                         output, lstm1_state = lstm1_block(tf.expand_dims(rnn_output[step, :], 0), lstm1_state)
                         lstm1_layers_outputs.append(output)
                 lstm1_block_output.extend(lstm1_layers_outputs)
-                if end is True:
+                if self.end is True:
                     lstm1_rest = 3 - len(lstm1_block_output)
                     rnn_block_output.extend(
                         [tf.Variable(tf.zeros([LSTM1_HIDDENSIZE])) * rnn_output.shape[0].value * lstm1_rest]
