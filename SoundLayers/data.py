@@ -120,14 +120,14 @@ def np_load(batch_type, path='G:/sound_fixed/'):
             sound_data = np.load(os.path.join(path, batch_type, file))
             slice_number = math.ceil(sound_data.shape[1] / 10)
             data_list = np.array_split(sound_data, slice_number, axis=1)
-            for data_slice in data_list:
+            for index, data_slice in enumerate(data_list):
                 np_data_padding = np.pad(
                     data_slice,
-                    ((0, 0), (0, 10 - len(data_slice[0]))),
+                    ((0, 0), (0, 10 - data_slice.shape[1])),
                     mode='constant',
                     constant_values=0
                 )
-                if data_list.index(data_slice) + 1 == len(data_list):
+                if index + 1 == len(data_list):
                     end = True
                 else:
                     end = False
@@ -136,4 +136,5 @@ def np_load(batch_type, path='G:/sound_fixed/'):
 
 if __name__ == '__main__':
     n = np_load(batch_type='train', path='G:/sound_npy/')
-    print(next(n))
+    while 1:
+        print(next(n))

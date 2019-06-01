@@ -30,12 +30,12 @@ class SoundLayers:
 
         self.x = tf.placeholder(tf.float32, [features, time_slices])
         self.y = tf.placeholder(tf.float32, [classes])
-        self.rnn_block_output = tf.placeholder(tf.float32)
-        self.lstm1_block_output = tf.placeholder(tf.float32)
+        self.rnn_block_output = tf.Variable(tf.zeros([1, 512]))
+        self.lstm1_block_output = tf.Variable(tf.zeros([1, 128]))
 
         x = tf.transpose(self.x, [1, 0])
 
-        # RNN层
+        # RNN层网络结构
         rnn_cell = tf.nn.rnn_cell.BasicRNNCell(num_units=RNN_HIDDENSIZE)
         rnn_layers = [tf.contrib.rnn.DropoutWrapper(
             rnn_cell,
@@ -49,6 +49,37 @@ class SoundLayers:
         rnn_layers_outputs = []
         rnn_state = self.rnn_init_state
 
+        # LSTM1层网络结构，lstm1层处理3s的信息，3个lstm1层输出拼接成9s信息送往lstm2层
+        lstm1_cell = tf.contrib.rnn.BasicLSTMCell(num_units=LSTM1_HIDDENSIZE, state_is_tuple=True)
+        lstm1_layers = [tf.contrib.rnn.DropoutWrapper(
+            lstm1_cell,
+            output_keep_prob=1 - LSTM1_RATE
+        )] * LSTM1_LAYERS if is_training else [lstm1_cell] * LSTM1_LAYERS
+
+        lstm1_block = tf.contrib.rnn.MultiRNNCell(lstm1_layers)
+
+        self.lstm1_init_state = lstm1_block.zero_state(BATCH_SIZE, tf.float32)
+
+        lstm1_layers_outputs = []
+        lstm1_state = self.lstm1_init_state
+
+        # LSTM2层网络结构
+        lstm2_cell = tf.nn.rnn_cell.BasicLSTMCell(num_units=LSTM2_HIDDENSIZE, state_is_tuple=True)
+
+        # 可能需要每一层单独建立
+        lstm2_layers = [tf.contrib.rnn.DropoutWrapper(
+            lstm2_cell,
+            output_keep_prob=1 - LSTM2_RATE
+        )] * LSTM2_LAYERS if is_training else [lstm2_cell] * LSTM2_LAYERS
+
+        lstm2_block = tf.contrib.rnn.MultiRNNCell(lstm2_layers)
+
+        self.lstm2_init_state = lstm2_block.zero_state(BATCH_SIZE, tf.float32)
+
+        lstm2_layers_outputs = []
+        lstm2_state = self.lstm2_init_state
+
+        # RNN层计算
         with tf.variable_scope('rnn_layer'):
             for step in range(time_slices):
                 if step > 0:
@@ -57,28 +88,21 @@ class SoundLayers:
                 rnn_layers_outputs.append(output)
         rnn_output = tf.concat(rnn_layers_outputs, axis=0)
 
-        self.rnn_block_output = tf.concat([self.rnn_block_output, rnn_output])
+        self.rnn_block_output = tf.concat([self.rnn_block_output, rnn_output], axis=0)
 
         if end is True:
             rnn_rest = 60 - self.rnn_block_output.shape[0].value
             self.rnn_block_output = tf.pad(self.rnn_block_output, [0, rnn_rest], mode='CONSTANT')
 
+        print('输出时间片{0}'.format(self.rnn_block_output.shape[0].value))
+        self.optimizer = tf.no_op()
+        self.cost = tf.Variable(tf.zeros([1]))
+        self.accuracy = tf.Variable(tf.zeros([1]))
+
         if self.rnn_block_output.shape[0].value >= 60:
             self.rnn_block_output = rnn_output
-            # lstm1层处理3s的信息，3个lstm1层输出拼接成9s信息送往lstm2层
-            lstm1_cell = tf.contrib.rnn.BasicLSTMCell(num_units=LSTM1_HIDDENSIZE, state_is_tuple=True)
-            lstm1_layers = [tf.contrib.rnn.DropoutWrapper(
-                lstm1_cell,
-                output_keep_prob=1 - LSTM1_RATE
-            )] * LSTM1_LAYERS if is_training else [lstm1_cell] * LSTM1_LAYERS
 
-            lstm1_block = tf.contrib.rnn.MultiRNNCell(lstm1_layers)
-
-            self.lstm1_init_state = lstm1_block.zero_state(BATCH_SIZE, tf.float32)
-
-            lstm1_layers_outputs = []
-            lstm1_state = self.lstm1_init_state
-
+            # LSTM1层计算
             with tf.variable_scope('lstm1_layer'):
                 for step in range(self.rnn_block_output.shape[0].value):
                     if step > 0:
@@ -86,35 +110,25 @@ class SoundLayers:
                     output, lstm1_state = lstm1_block(tf.expand_dims(self.rnn_block_output[step, :], 0), lstm1_state)
                     lstm1_layers_outputs.append(output)
             lstm1_output = tf.concat(lstm1_layers_outputs, axis=0)
-            self.lstm1_block_output = tf.concat([self.lstm1_block_output, lstm1_output])
+            self.lstm1_block_output = tf.concat([self.lstm1_block_output, lstm1_output], axis=0)
             if self.end is True:
                 lstm1_rest = 180 - self.lstm1_block_output.shape[0].value
                 self.lstm1_block_output = tf.pad(self.rnn_block_output, [0, lstm1_rest], mode='CONSTANT')
 
+            self.optimizer = tf.no_op()
             if self.lstm1_block_output.shape[0].value >= 180:
                 self.lstm1_block_output = lstm1_output
-                lstm1_output = tf.reshape(tf.concat(self.lstm1_block_output, axis=0), [-1, LSTM1_HIDDENSIZE])
 
-                lstm2_cell = tf.nn.rnn_cell.BasicLSTMCell(num_units=LSTM2_HIDDENSIZE, state_is_tuple=True)
-
-                # 可能需要每一层单独建立
-                lstm2_layers = [tf.contrib.rnn.DropoutWrapper(
-                    lstm2_cell,
-                    output_keep_prob=1 - LSTM2_RATE
-                )] * LSTM2_LAYERS if is_training else [lstm2_cell] * LSTM2_LAYERS
-
-                lstm2_block = tf.contrib.rnn.MultiRNNCell(lstm2_layers)
-
-                self.lstm2_init_state = lstm2_block.zero_state(BATCH_SIZE, tf.float32)
-
-                lstm2_layers_outputs = []
-                lstm2_state = self.lstm2_init_state
-                lstm2_steps = lstm1_output.shape[0].value
+                # LSTM2层计算
+                lstm2_steps = self.lstm1_block_output.shape[0].value
                 with tf.variable_scope('lstm2_layer'):
                     for step in range(lstm2_steps):
                         if step > 1:
                             tf.get_variable_scope().reuse_variables()
-                        output, lstm2_state = lstm2_block(tf.expand_dims(lstm1_output[step, :], 0), lstm2_state)
+                        output, lstm2_state = lstm2_block(
+                            tf.expand_dims(self.lstm1_block_output[step, :], 0),
+                            lstm2_state
+                        )
                         lstm2_layers_outputs.append(output)
 
                 lstm2_output = tf.reshape(
