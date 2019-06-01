@@ -64,7 +64,7 @@ class SoundLayers:
             self.rnn_block_output = tf.pad(self.rnn_block_output, [0, rnn_rest], mode='CONSTANT')
 
         if self.rnn_block_output.shape[0].value >= 60:
-
+            self.rnn_block_output = rnn_output
             # lstm1层处理3s的信息，3个lstm1层输出拼接成9s信息送往lstm2层
             lstm1_cell = tf.contrib.rnn.BasicLSTMCell(num_units=LSTM1_HIDDENSIZE, state_is_tuple=True)
             lstm1_layers = [tf.contrib.rnn.DropoutWrapper(
@@ -85,14 +85,14 @@ class SoundLayers:
                         tf.get_variable_scope().reuse_variables()
                     output, lstm1_state = lstm1_block(tf.expand_dims(self.rnn_block_output[step, :], 0), lstm1_state)
                     lstm1_layers_outputs.append(output)
-            lstm1_output = tf.concat(rnn_layers_outputs, axis=0)
+            lstm1_output = tf.concat(lstm1_layers_outputs, axis=0)
             self.lstm1_block_output = tf.concat([self.lstm1_block_output, lstm1_output])
             if self.end is True:
                 lstm1_rest = 180 - self.lstm1_block_output.shape[0].value
                 self.lstm1_block_output = tf.pad(self.rnn_block_output, [0, lstm1_rest], mode='CONSTANT')
 
             if self.lstm1_block_output.shape[0].value >= 180:
-
+                self.lstm1_block_output = lstm1_output
                 lstm1_output = tf.reshape(tf.concat(self.lstm1_block_output, axis=0), [-1, LSTM1_HIDDENSIZE])
 
                 lstm2_cell = tf.nn.rnn_cell.BasicLSTMCell(num_units=LSTM2_HIDDENSIZE, state_is_tuple=True)
