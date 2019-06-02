@@ -8,13 +8,21 @@ NUM_EPOCH = 20
 
 def run_epoch(session, model, data, train_op, output_log, epoch_size):
     total_accuracy = 0.0
-    rnn_state, lstm1_state, lstm2_state = session.run([model.rnn_init_state, model.lstm1_init_state, model.lstm2_init_state])
+    rnn_state, lstm1_state, lstm2_state = session.run(
+        [model.rnn_init_state, model.lstm1_init_state, model.lstm2_init_state]
+    )
 
     for step in range(epoch_size):
         x, y, end = next(data)
-        print(x.shape, x.dtype)
         cost, _, accuracy, rnn_state, lstm1_state, lstm2_state = session.run(
-            [model.cost, train_op, model.accuracy, model.rnn_state, model.lstm1_state, model.lstm2_state],
+            [
+                model.cost,
+                train_op,
+                model.accuracy,
+                model.rnn_final_state,
+                model.lstm1_final_state,
+                model.lstm2_final_state
+            ],
             {
                 model.x: x,
                 model.y: y,
@@ -38,11 +46,11 @@ def main():
     valid_data = data.np_load(path='G:/sound_npy', batch_type='eval')
     test_data = data.np_load(path='G:/sound_npy', batch_type='test')
 
-    train_epoch_size = 6000
+    train_epoch_size = 6000 * 8
 
-    valid_epoch_size = 500
+    valid_epoch_size = 500 * 8
 
-    test_epoch_size = 2000
+    test_epoch_size = 2000 * 8
 
     restore_check_point = True
     check_point_path = './model/sound_test'
@@ -64,6 +72,9 @@ def main():
 
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=session, coord=coord)
+
+        writer = tf.summary.FileWriter('.')
+        writer.add_graph(tf.get_default_graph())
 
         best_accuracy = 0
         for i in range(NUM_EPOCH):

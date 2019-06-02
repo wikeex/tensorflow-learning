@@ -32,6 +32,7 @@ class SoundLayers:
         self.lstm1_block_output = tf.placeholder(tf.float32)
 
         x = tf.transpose(self.x, [1, 0])
+        y = tf.expand_dims(self.y, axis=0)
 
         # RNN层
         rnn_cell = tf.nn.rnn_cell.BasicRNNCell(num_units=RNN_HIDDENSIZE)
@@ -84,7 +85,7 @@ class SoundLayers:
         lstm1_output = tf.concat(lstm1_layers_outputs, axis=0)
         self.lstm1_final_state = lstm1_state
 
-        tf.assign(self.lstm1_block_output, tf.concat([self.lstm1_block_output[60:], lstm1_output]))
+        tf.assign(self.lstm1_block_output, tf.concat([self.lstm1_block_output[60:], lstm1_output], axis=0))
 
         lstm2_cell = tf.nn.rnn_cell.BasicLSTMCell(num_units=LSTM2_HIDDENSIZE, state_is_tuple=True)
 
@@ -118,13 +119,13 @@ class SoundLayers:
         softmax_bias = tf.get_variable('softmax_bias', [classes])
 
         logits = tf.matmul(lstm2_output, softmax_weight) + softmax_bias
-        logits_softmax = tf.nn.softmax(logits)
+        logits_softmax = tf.nn.softmax(logits, axis=1)
 
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(self.y, logits))
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(y, logits))
 
         self.cost = tf.reduce_sum(loss)
 
-        self.correct_prediction = tf.equal(tf.math.argmax(self.y, 1), tf.math.argmax(logits_softmax, 1))
+        self.correct_prediction = tf.equal(tf.math.argmax(y, 1), tf.math.argmax(logits_softmax, 1))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
 
         if not is_training:
