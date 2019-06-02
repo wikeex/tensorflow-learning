@@ -116,3 +116,5 @@ datasets/
 
 # model
 model/
+
+events.*

@@ -8,22 +8,16 @@ NUM_EPOCH = 20
 
 def run_epoch(session, model, data, train_op, output_log, epoch_size):
     total_accuracy = 0.0
-    rnn_state, lstm1_state, lstm2_state = session.run(
-        [
-            model.rnn_init_state,
-            model.lstm1_init_state,
-            model.lstm2_init_state
-        ]
-    )
+    rnn_state, lstm1_state, lstm2_state = session.run([model.rnn_init_state, model.lstm1_init_state, model.lstm2_init_state])
 
     for step in range(epoch_size):
         x, y, end = next(data)
-        cost, _, accuracy = session.run(
-            [model.cost, train_op, model.accuracy],
+        print(x.shape, x.dtype)
+        cost, _, accuracy, rnn_state, lstm1_state, lstm2_state = session.run(
+            [model.cost, train_op, model.accuracy, model.rnn_state, model.lstm1_state, model.lstm2_state],
             {
                 model.x: x,
                 model.y: y,
-                model.end: [end],
                 model.rnn_init_state: rnn_state,
                 model.lstm1_init_state: lstm1_state,
                 model.lstm2_init_state: lstm2_state
