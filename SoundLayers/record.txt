@@ -36,3 +36,7 @@ In iteration: 18
 In iteration: 19
 In iteration: 20
 In iteration: 20
+In iteration: 1
+In iteration: 1
+In iteration: 2
+In iteration: 3

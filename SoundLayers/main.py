@@ -12,18 +12,20 @@ def run_epoch(session, model, data, train_op, output_log, epoch_size):
         [model.rnn_init_state, model.lstm1_init_state, model.lstm2_init_state]
     )
 
+    writer = tf.summary.FileWriter('.')
     for step in range(epoch_size):
-        x, y, end = next(data)
-        cost, _, accuracy, rnn_state, lstm1_state, lstm2_state = session.run(
+        x, y = next(data)
+        cost, _, accuracy, rnn_state, lstm1_state, lstm2_state, graph = session.run(
             [
                 model.cost,
                 train_op,
                 model.accuracy,
                 model.rnn_final_state,
                 model.lstm1_final_state,
-                model.lstm2_final_state
+                model.lstm2_final_state,
+                model.merged
             ],
-            {
+            feed_dict={
                 model.x: x,
                 model.y: y,
                 model.rnn_init_state: rnn_state,
@@ -33,7 +35,8 @@ def run_epoch(session, model, data, train_op, output_log, epoch_size):
         )
         total_accuracy += accuracy
 
-        if output_log and step % 100 == 0:
+        if output_log and step % 1000 == 0:
+            writer.add_summary(graph, step)
             with open('./recode.txt', 'a') as f:
                 f.write('After %d steps, accuracy is %.3f\n' % (step, accuracy))
             print('After %d steps, accuracy is %.3f\n' % (step,  accuracy))
@@ -46,7 +49,7 @@ def main():
     valid_data = data.np_load(path='G:/sound_npy', batch_type='eval')
     test_data = data.np_load(path='G:/sound_npy', batch_type='test')
 
-    train_epoch_size = 6000 * 8
+    train_epoch_size = 48000
 
     valid_epoch_size = 500 * 8
 
@@ -72,9 +75,6 @@ def main():
 
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=session, coord=coord)
-
-        writer = tf.summary.FileWriter('.')
-        writer.add_graph(tf.get_default_graph())
 
         best_accuracy = 0
         for i in range(NUM_EPOCH):

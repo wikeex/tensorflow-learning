@@ -28,8 +28,6 @@ class SoundLayers:
 
         self.x = tf.placeholder(tf.float32, [features, time_slices])
         self.y = tf.placeholder(tf.float32, [classes])
-        self.rnn_block_output = tf.placeholder(tf.float32)
-        self.lstm1_block_output = tf.placeholder(tf.float32)
 
         x = tf.transpose(self.x, [1, 0])
         y = tf.expand_dims(self.y, axis=0)
@@ -122,13 +120,19 @@ class SoundLayers:
         logits_softmax = tf.nn.softmax(logits, axis=1)
 
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(y, logits))
+        loss_summary = tf.summary.scalar('loss', loss)
 
         self.cost = tf.reduce_sum(loss)
 
         self.correct_prediction = tf.equal(tf.math.argmax(y, 1), tf.math.argmax(logits_softmax, 1))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
 
+        self.merged = tf.summary.merge([loss_summary])
+
         if not is_training:
             return
 
         self.optimizer = tf.train.AdamOptimizer(LEARNING_STEP).minimize(loss)
+
+
+
