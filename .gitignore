@@ -116,3 +116,6 @@ datasets/
 
 # model
 model/
+
+# record file
+record.txt
