@@ -133,6 +133,3 @@ class SoundLayers:
             return
 
         self.optimizer = tf.train.AdamOptimizer(LEARNING_STEP).minimize(loss)
-
-
-
