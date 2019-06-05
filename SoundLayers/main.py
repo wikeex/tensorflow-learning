@@ -73,7 +73,7 @@ def main():
 
         best_accuracy = 0
         for i in range(NUM_EPOCH):
-            with open('./recode.txt', 'a') as f:
+            with open('./record.txt', 'a') as f:
                 f.write('In iteration: %d\n' % (i + 1))
             print('In iteration: %d' % (i + 1))
             run_epoch(session, train_model, train_data, train_model.optimizer, True, train_epoch_size)
