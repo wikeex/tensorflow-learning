@@ -18,7 +18,7 @@ LSTM2_RATE = 0.5
 LEARNING_STEP = 0.001
 
 
-class SoundLayers:
+class RNNLayer:
     def __init__(self, is_training, **kwargs):
         time_slices = kwargs.get('time_slices')
         features = kwargs.get('mfcc_features')
@@ -41,11 +41,10 @@ class SoundLayers:
 
         rnn_block = tf.contrib.rnn.MultiRNNCell(rnn_layers)
 
-        self.rnn_init_state = rnn_block.zero_state(BATCH_SIZE, tf.float32)
+        self.init_state = rnn_block.zero_state(BATCH_SIZE, tf.float32)
 
         rnn_layers_outputs = []
-        rnn_state = self.rnn_init_state
-        self.rnn_block_output = tf.get_variable('rnn_block_output', [60, RNN_HIDDENSIZE], initializer=tf.zeros_initializer())
+        rnn_state = self.init_state
 
         with tf.variable_scope('rnn_layer'):
             for step in range(time_slices):
@@ -53,10 +52,41 @@ class SoundLayers:
                     tf.get_variable_scope().reuse_variables()
                 output, rnn_state = rnn_block(tf.expand_dims(x[step, :], axis=0), rnn_state)
                 rnn_layers_outputs.append(output)
-        rnn_output = tf.concat(rnn_layers_outputs, axis=0)
-        self.rnn_final_state = rnn_state
-        
-        tf.assign(self.rnn_block_output, tf.concat([self.rnn_block_output[10:], rnn_output], axis=0))
+        self.output = tf.concat(rnn_layers_outputs, axis=0)
+        logits_input = tf.reshape(self.output, [-1, RNN_HIDDENSIZE * time_slices])
+        self.final_state = rnn_state
+
+        softmax_weight = tf.get_variable('rnn_softmax_weight', [RNN_HIDDENSIZE * time_slices, classes])
+        softmax_bias = tf.get_variable('rnn_softmax_bias', [classes])
+
+        logits = tf.matmul(logits_input, softmax_weight) + softmax_bias
+        logits_softmax = tf.nn.softmax(logits, axis=1)
+
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(y, logits))
+        self.loss_summary = tf.summary.scalar('rnn_loss', loss)
+
+        self.cost = tf.reduce_sum(loss)
+
+        self.correct_prediction = tf.equal(tf.math.argmax(y, 1), tf.math.argmax(logits_softmax, 1))
+        self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
+        self.accuracy_summary = tf.summary.scalar('rnn_accuracy', self.accuracy)
+
+        if not is_training:
+            return
+
+        self.optimizer = tf.train.AdamOptimizer(LEARNING_STEP).minimize(loss)
+
+
+class LSTM1Layer:
+    def __init__(self, is_training, **kwargs):
+        features = kwargs.get('mfcc_features')
+        time_slices = kwargs.get('time_slices')
+        classes = kwargs.get('classes')
+
+        x = self.x = tf.placeholder(dtype=tf.float32, shape=[time_slices, features])
+        self.y = tf.placeholder(dtype=tf.float32, shape=[classes])
+
+        y = tf.expand_dims(self.y, axis=0)
 
         # lstm1层处理3s的信息，3个lstm1层输出拼接成9s信息送往lstm2层
         lstm1_cell = tf.contrib.rnn.BasicLSTMCell(num_units=LSTM1_HIDDENSIZE, state_is_tuple=True)
@@ -67,23 +97,53 @@ class SoundLayers:
 
         lstm1_block = tf.contrib.rnn.MultiRNNCell(lstm1_layers)
 
-        self.lstm1_init_state = lstm1_block.zero_state(BATCH_SIZE, tf.float32)
+        self.init_state = lstm1_block.zero_state(BATCH_SIZE, tf.float32)
 
         lstm1_layers_outputs = []
-        lstm1_state = self.lstm1_init_state
-        
-        self.lstm1_block_output = tf.get_variable('lstm1_block_output', [180, LSTM1_HIDDENSIZE])
-        
+        lstm1_state = self.init_state
+
         with tf.variable_scope('lstm1_layer'):
-            for step in range(self.rnn_block_output.shape[0].value):
+            for step in range(time_slices):
                 if step > 0:
                     tf.get_variable_scope().reuse_variables()
-                output, lstm1_state = lstm1_block(tf.expand_dims(self.rnn_block_output[step, :], 0), lstm1_state)
+                output, lstm1_state = lstm1_block(tf.expand_dims(x[step, :], 0), lstm1_state)
                 lstm1_layers_outputs.append(output)
-        lstm1_output = tf.concat(lstm1_layers_outputs, axis=0)
-        self.lstm1_final_state = lstm1_state
+        self.output = tf.concat(lstm1_layers_outputs, axis=0)
+        self.final_state = lstm1_state
 
-        tf.assign(self.lstm1_block_output, tf.concat([self.lstm1_block_output[60:], lstm1_output], axis=0))
+        logits_input = tf.reshape(self.output, [-1, LSTM1_HIDDENSIZE * time_slices])
+
+        softmax_weight = tf.get_variable('lstm1_softmax_weight', [LSTM1_HIDDENSIZE * time_slices, classes])
+        softmax_bias = tf.get_variable('lstm1_softmax_bias', [classes])
+
+        logits = tf.matmul(logits_input, softmax_weight) + softmax_bias
+        logits_softmax = tf.nn.softmax(logits, axis=1)
+
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(y, logits))
+        self.loss_summary = tf.summary.scalar('lstm1_loss', loss)
+
+        self.cost = tf.reduce_sum(loss)
+
+        self.correct_prediction = tf.equal(tf.math.argmax(y, 1), tf.math.argmax(logits_softmax, 1))
+        self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
+        self.accuracy_summary = tf.summary.scalar('lstm1_accuracy', self.accuracy)
+
+        if not is_training:
+            return
+
+        self.optimizer = tf.train.AdamOptimizer(LEARNING_STEP).minimize(loss)
+
+
+class LSTM2Layer:
+    def __init__(self, is_training, **kwargs):
+        features = kwargs.get('mfcc_features')
+        time_slices = kwargs.get('time_slices')
+        classes = kwargs.get('classes')
+
+        x = self.x = tf.placeholder(dtype=tf.float32, shape=[time_slices, features])
+        self.y = tf.placeholder(dtype=tf.float32, shape=[classes])
+
+        y = tf.expand_dims(self.y, axis=0)
 
         lstm2_cell = tf.nn.rnn_cell.BasicLSTMCell(num_units=LSTM2_HIDDENSIZE, state_is_tuple=True)
 
@@ -95,39 +155,37 @@ class SoundLayers:
 
         lstm2_block = tf.contrib.rnn.MultiRNNCell(lstm2_layers)
 
-        self.lstm2_init_state = lstm2_block.zero_state(BATCH_SIZE, tf.float32)
+        self.init_state = lstm2_block.zero_state(BATCH_SIZE, tf.float32)
 
         lstm2_layers_outputs = []
-        lstm2_state = self.lstm2_init_state
-        lstm2_steps = lstm1_output.shape[0].value
+        lstm2_state = self.init_state
+
         with tf.variable_scope('lstm2_layer'):
-            for step in range(lstm2_steps):
+            for step in range(time_slices):
                 if step > 1:
                     tf.get_variable_scope().reuse_variables()
-                output, lstm2_state = lstm2_block(tf.expand_dims(lstm1_output[step, :], 0), lstm2_state)
+                output, lstm2_state = lstm2_block(tf.expand_dims(x[step, :], 0), lstm2_state)
                 lstm2_layers_outputs.append(output)
-        self.lstm2_final_state = lstm2_state
-        
-        lstm2_output = tf.reshape(
-            tf.concat(lstm2_layers_outputs, axis=0),
-            [-1, LSTM2_HIDDENSIZE * lstm2_steps]
-        )
+        self.final_state = lstm2_state
 
-        softmax_weight = tf.get_variable('softmax_weight', [LSTM2_HIDDENSIZE * lstm2_steps, classes])
-        softmax_bias = tf.get_variable('softmax_bias', [classes])
+        self.output = tf.concat(lstm2_layers_outputs, axis=0)
 
-        logits = tf.matmul(lstm2_output, softmax_weight) + softmax_bias
+        logits_input = tf.reshape(self.output, [-1, LSTM2_HIDDENSIZE * time_slices])
+
+        softmax_weight = tf.get_variable('lstm2_softmax_weight', [LSTM2_HIDDENSIZE * time_slices, classes])
+        softmax_bias = tf.get_variable('lstm2_softmax_bias', [classes])
+
+        logits = tf.matmul(logits_input, softmax_weight) + softmax_bias
         logits_softmax = tf.nn.softmax(logits, axis=1)
 
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(y, logits))
-        loss_summary = tf.summary.scalar('loss', loss)
+        self.loss_summary = tf.summary.scalar('lstm2_loss', loss)
 
         self.cost = tf.reduce_sum(loss)
 
         self.correct_prediction = tf.equal(tf.math.argmax(y, 1), tf.math.argmax(logits_softmax, 1))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
-
-        self.merged = tf.summary.merge([loss_summary])
+        self.accuracy_summary = tf.summary.scalar('lstm2_accuracy', self.accuracy)
 
         if not is_training:
             return
