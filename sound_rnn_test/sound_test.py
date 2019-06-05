@@ -4,11 +4,11 @@ from sound_lstm_test.model import SoundTestModel
 
 DATA_PATH = './datasets/numbers'
 
-TRAIN_BATCH_SIZE = 10
-TRAIN_NUM_STEPS = 80
+TRAIN_BATCH_SIZE = 1
+TRAIN_NUM_STEPS = 10
 
-EVAL_BATCH_SIZE = 10
-EVAL_NUM_STEPS = 80
+EVAL_BATCH_SIZE = 1
+EVAL_NUM_STEPS = 10
 NUM_EPOCH = 20
 
 
@@ -16,15 +16,18 @@ def run_epoch(session, model, data, train_op, output_log, epoch_size):
     total_accuracy = 0.0
     state = session.run(model.initial_state)
 
+    writer = tf.summary.FileWriter('.')
+
     for step in range(epoch_size):
-        x, y = next(data)
-        cost, state, _, accuracy = session.run(
-            [model.cost, model.final_state, train_op, model.accuracy],
+        x, y, end = next(data)
+        cost, state, _, accuracy, merged = session.run(
+            [model.cost, model.final_state, train_op, model.accuracy, model.merged],
             {model.x: x, model.y: y, model.initial_state: state}
         )
         total_accuracy += accuracy
 
         if output_log and step % 100 == 0:
+            writer.add_summary(merged)
             with open('./recode.txt', 'a') as f:
                 f.write('After %d steps, accuracy is %.3f\n' % (step, accuracy))
             print('After %d steps, accuracy is %.3f\n' % (step,  accuracy))
@@ -33,9 +36,9 @@ def run_epoch(session, model, data, train_op, output_log, epoch_size):
 
 
 def main():
-    train_data = data.np_load(batch_size=10, batch_type='train/')
-    valid_data = data.np_load(batch_size=10, batch_type='eval/')
-    test_data = data.np_load(batch_size=10, batch_type='test/')
+    train_data = data.np_load(batch_type='train/')
+    valid_data = data.np_load(batch_type='eval/')
+    test_data = data.np_load(batch_type='test/')
 
     train_epoch_size = 6000
 

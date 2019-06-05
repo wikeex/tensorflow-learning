@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-HIDDEN_SIZE = 80
+HIDDEN_SIZE = 512
 NUM_LAYERS = 4
 LEARNING_RATE = 0.001
 KEEP_PROB = 0.5
@@ -8,20 +8,21 @@ KEEP_PROB = 0.5
 
 class SoundTestModel:
     def __init__(self, is_training, batch_size, num_steps):
-        self.x = tf.placeholder(tf.float32, [batch_size, 512, 80])
-        self.y = tf.placeholder(tf.float32, [batch_size, 59])
+        self.x = tf.placeholder(tf.float32, [512, 10])
+        self.y = tf.placeholder(tf.float32, [59])
 
-        x = tf.transpose(self.x, [0, 2, 1])
+        x = tf.transpose(self.x, [1, 0])
+        y = tf.expand_dims(self.y, axis=1)
 
         cells = []
 
         for _ in range(NUM_LAYERS):
-            lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(num_units=HIDDEN_SIZE, state_is_tuple=True)
+            rnn_cell = tf.nn.rnn_cell.BasicRNNCell(num_units=HIDDEN_SIZE, state_is_tuple=True)
 
             if is_training:
-                lstm_cell = tf.contrib.rnn.DropoutWrapper(lstm_cell, output_keep_prob=KEEP_PROB)
+                rnn_cell = tf.contrib.rnn.DropoutWrapper(rnn_cell, output_keep_prob=KEEP_PROB)
 
-            cells.append(lstm_cell)
+            cells.append(rnn_cell)
 
         rnn_net = tf.contrib.rnn.MultiRNNCell(cells)
 
@@ -33,7 +34,7 @@ class SoundTestModel:
             for step in range(num_steps):
                 if step > 0:
                     tf.get_variable_scope().reuse_variables()
-                rnn_output, state = rnn_net(x[:, step, :], state)
+                rnn_output, state = rnn_net(tf.expand_dims(x[step, :], axis=0), state)
                 outputs.append(rnn_output)
 
         output = tf.reshape(tf.concat(outputs, 1), [-1, HIDDEN_SIZE*num_steps])
@@ -44,13 +45,18 @@ class SoundTestModel:
         logits = tf.matmul(output, softmax_weight) + softmax_bias
         logits_softmax = tf.nn.softmax(logits=logits, axis=1)
 
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=self.y))
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=y))
 
         self.cost = tf.reduce_sum(loss) / batch_size
+        cost_summary = tf.summary.scalar('cost', self.cost)
+
         self.final_state = state
 
-        self.correct_prediction = tf.equal(tf.math.argmax(self.y, 1), tf.math.argmax(logits_softmax, 1))
+        self.correct_prediction = tf.equal(tf.math.argmax(y, 1), tf.math.argmax(logits_softmax, 1))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
+        accuracy_summary = tf.summary.scalar('accuracy', self.accuracy)
+
+        self.merged = tf.summary.merge([cost_summary, accuracy_summary])
 
         if not is_training:
             return
