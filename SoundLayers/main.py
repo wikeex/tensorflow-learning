@@ -115,9 +115,9 @@ def main():
             lstm2_model=LSTM2Layer(True, time_slices=180, mfcc_features=128, classes=59)
         )
         merged = tf.summary.merge([
-            eval_models['rnn_model'].loss_summary,
-            eval_models['lstm1_model'].loss_summary,
-            eval_models['lstm2_model'].loss_summary,
+            eval_models['rnn_model'].cost_summary,
+            eval_models['lstm1_model'].cost_summary,
+            eval_models['lstm2_model'].cost_summary,
             eval_models['rnn_model'].accuracy_summary,
             eval_models['lstm1_model'].accuracy_summary,
             eval_models['lstm2_model'].accuracy_summary
@@ -134,7 +134,7 @@ def main():
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=session, coord=coord)
 
-        writer = tf.summary.FileWriter('.')
+        writer = tf.summary.FileWriter('.', session.graph)
         best_accuracy = 0
         for i in range(NUM_EPOCH):
             with open('./record.txt', 'a') as f:
@@ -147,7 +147,7 @@ def main():
                 f.write('In iteration: %d\n' % (i + 1))
             print('Epoch: %d Validation Accuracy: %.3f' % (i + 1, valid_accuracy))
 
-            # writer.add_summary(merged, i)
+            writer.add_summary(merged, i)
 
             if valid_accuracy > best_accuracy:
                 saver.save(session, check_point_path)

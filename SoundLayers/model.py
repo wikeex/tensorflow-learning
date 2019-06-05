@@ -63,13 +63,15 @@ class RNNLayer:
         logits_softmax = tf.nn.softmax(logits, axis=1)
 
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(y, logits))
-        self.loss_summary = tf.summary.scalar('rnn_loss', loss)
 
         self.cost = tf.reduce_sum(loss)
+        self.cost_summary = tf.summary.scalar('rnn_cost', self.cost)
 
         self.correct_prediction = tf.equal(tf.math.argmax(y, 1), tf.math.argmax(logits_softmax, 1))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
         self.accuracy_summary = tf.summary.scalar('rnn_accuracy', self.accuracy)
+
+        self.merged = tf.summary.merge([self.cost_summary, self.accuracy_summary])
 
         if not is_training:
             return
@@ -120,13 +122,15 @@ class LSTM1Layer:
         logits_softmax = tf.nn.softmax(logits, axis=1)
 
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(y, logits))
-        self.loss_summary = tf.summary.scalar('lstm1_loss', loss)
 
         self.cost = tf.reduce_sum(loss)
+        self.cost_summary = tf.summary.scalar('lstm1_cost', self.cost)
 
         self.correct_prediction = tf.equal(tf.math.argmax(y, 1), tf.math.argmax(logits_softmax, 1))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
         self.accuracy_summary = tf.summary.scalar('lstm1_accuracy', self.accuracy)
+
+        self.merged = tf.summary.merge([self.cost_summary, self.accuracy_summary])
 
         if not is_training:
             return
@@ -179,13 +183,15 @@ class LSTM2Layer:
         logits_softmax = tf.nn.softmax(logits, axis=1)
 
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(y, logits))
-        self.loss_summary = tf.summary.scalar('lstm2_loss', loss)
 
         self.cost = tf.reduce_sum(loss)
+        self.cost_summary = tf.summary.scalar('lstm2_cost', self.cost)
 
         self.correct_prediction = tf.equal(tf.math.argmax(y, 1), tf.math.argmax(logits_softmax, 1))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
         self.accuracy_summary = tf.summary.scalar('lstm2_accuracy', self.accuracy)
+
+        self.merged = tf.summary.merge([self.cost_summary, self.accuracy_summary])
 
         if not is_training:
             return
