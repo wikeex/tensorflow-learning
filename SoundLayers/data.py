@@ -131,7 +131,7 @@ def np_load(batch_type, path='G:/sound_fixed/'):
                     end = True
                 else:
                     end = False
-                yield np_data_padding, np.array(label), end
+                yield np_data_padding, np.array(label, dtype=np.float32), end
 
 
 if __name__ == '__main__':

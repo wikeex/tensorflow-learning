@@ -117,5 +117,8 @@ datasets/
 # model
 model/
 
+events.*
+
 # record file
 record.txt
+
