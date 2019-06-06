@@ -17,7 +17,7 @@ def run_epoch(session, model, data, train_op, output_log, epoch_size):
     state = session.run(model.initial_state)
 
     for step in range(epoch_size):
-        x, y, end = next(data)
+        x, y = next(data)
         cost, state, _, accuracy, merged = session.run(
             [model.cost, model.final_state, train_op, model.accuracy, model.merged],
             {model.x: x, model.y: y, model.initial_state: state}
