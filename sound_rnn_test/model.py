@@ -12,12 +12,12 @@ class SoundTestModel:
         self.y = tf.placeholder(tf.float32, [59])
 
         x = tf.transpose(self.x, [1, 0])
-        y = tf.expand_dims(self.y, axis=1)
+        y = tf.expand_dims(self.y, axis=0)
 
         cells = []
 
         for _ in range(NUM_LAYERS):
-            rnn_cell = tf.nn.rnn_cell.BasicRNNCell(num_units=HIDDEN_SIZE, state_is_tuple=True)
+            rnn_cell = tf.nn.rnn_cell.BasicRNNCell(num_units=HIDDEN_SIZE)
 
             if is_training:
                 rnn_cell = tf.contrib.rnn.DropoutWrapper(rnn_cell, output_keep_prob=KEEP_PROB)

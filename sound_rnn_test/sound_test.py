@@ -1,6 +1,6 @@
 import tensorflow as tf
-from sound_lstm_test import data
-from sound_lstm_test.model import SoundTestModel
+from sound_rnn_test import data
+from sound_rnn_test.model import SoundTestModel
 
 DATA_PATH = './datasets/numbers'
 
@@ -9,14 +9,12 @@ TRAIN_NUM_STEPS = 10
 
 EVAL_BATCH_SIZE = 1
 EVAL_NUM_STEPS = 10
-NUM_EPOCH = 20
+NUM_EPOCH = 200
 
 
 def run_epoch(session, model, data, train_op, output_log, epoch_size):
     total_accuracy = 0.0
     state = session.run(model.initial_state)
-
-    writer = tf.summary.FileWriter('.')
 
     for step in range(epoch_size):
         x, y, end = next(data)
@@ -27,12 +25,11 @@ def run_epoch(session, model, data, train_op, output_log, epoch_size):
         total_accuracy += accuracy
 
         if output_log and step % 100 == 0:
-            writer.add_summary(merged)
-            with open('./recode.txt', 'a') as f:
+            with open('./record.txt', 'a') as f:
                 f.write('After %d steps, accuracy is %.3f\n' % (step, accuracy))
             print('After %d steps, accuracy is %.3f\n' % (step,  accuracy))
     print(total_accuracy, epoch_size)
-    return total_accuracy / epoch_size
+    return total_accuracy / epoch_size, merged
 
 
 def main():
@@ -40,11 +37,11 @@ def main():
     valid_data = data.np_load(batch_type='eval/')
     test_data = data.np_load(batch_type='test/')
 
-    train_epoch_size = 6000
+    train_epoch_size = 1000
 
-    valid_epoch_size = 500
+    valid_epoch_size = 100
 
-    test_epoch_size = 2000
+    test_epoch_size = 200
 
     restore_check_point = True
     check_point_path = './model/sound_test'
@@ -67,14 +64,18 @@ def main():
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=session, coord=coord)
 
+        writer = tf.summary.FileWriter('.')
+
         best_accuracy = 0
         for i in range(NUM_EPOCH):
-            with open('./recode.txt', 'a') as f:
+            with open('./record.txt', 'a') as f:
                 f.write('In iteration: %d\n' % (i + 1))
             print('In iteration: %d' % (i + 1))
             run_epoch(session, train_model, train_data, train_model.optimizer, True, train_epoch_size)
 
-            valid_accuracy = run_epoch(session, eval_model, valid_data, tf.no_op(), False, valid_epoch_size)
+            valid_accuracy, merged = run_epoch(session, eval_model, valid_data, tf.no_op(), False, valid_epoch_size)
+
+            writer.add_summary(merged, i)
             with open('./record.txt', 'a') as f:
                 f.write('In iteration: %d\n' % (i + 1))
             print('Epoch: %d Validation Accuracy: %.3f' % (i + 1, valid_accuracy))
@@ -82,7 +83,7 @@ def main():
             if valid_accuracy > best_accuracy:
                 saver.save(session, check_point_path)
 
-        test_accuracy = run_epoch(session, eval_model, test_data, tf.no_op(), False, test_epoch_size)
+        test_accuracy, merged = run_epoch(session, eval_model, test_data, tf.no_op(), False, test_epoch_size)
         with open('./record.txt', 'a') as f:
             f.write('In iteration: %d\n' % (i + 1))
         print('Test Accuracy: %.3f' % test_accuracy)
