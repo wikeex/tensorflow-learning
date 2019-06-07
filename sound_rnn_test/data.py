@@ -121,14 +121,15 @@ def np_load(batch_type, path='G:/sound_fixed/'):
             slice_number = math.ceil(sound_data.shape[1] / 10)
             data_list = np.array_split(sound_data, slice_number, axis=1)
 
-            np_data_padding = np.pad(
-                data_list[0],
-                ((0, 0), (0, 10 - data_list[0].shape[1])),
-                mode='constant',
-                constant_values=0
-            )
+            for data_slice in data_list:
+                np_data_padding = np.pad(
+                    data_slice ,
+                    ((0, 0), (0, 10 - data_slice.shape[1])),
+                    mode='constant',
+                    constant_values=0
+                )
 
-            yield np_data_padding, np.array(label, dtype=np.float32)
+                yield np_data_padding, np.array(label, dtype=np.float32)
 
 
 if __name__ == '__main__':
