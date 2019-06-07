@@ -1,9 +1,9 @@
 import tensorflow as tf
 
-HIDDEN_SIZE = 512
+HIDDEN_SIZE = 80
 NUM_LAYERS = 4
-LEARNING_RATE = 0.001
-KEEP_PROB = 0.5
+LEARNING_RATE = 0.0001
+KEEP_PROB = 0.8
 
 
 class SoundTestModel:

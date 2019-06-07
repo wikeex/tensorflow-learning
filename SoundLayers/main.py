@@ -8,6 +8,8 @@ NUM_EPOCH = 2000
 
 
 def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
+    writer = tf.summary.FileWriter('.', session.graph)
+
     rnn_model = kwargs.get('rnn_model')
     lstm1_model = kwargs.get('lstm1_model')
     lstm2_model = kwargs.get('lstm2_model')
@@ -58,18 +60,20 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
                 }
             )
             lstm1_outputs.append(lstm1_output)
+
             if end is True:
                 lstm1_outputs.extend([np.zeros([60, 128])] * (2 - lstm1_slice))
                 break
         lstm2_x = np.concatenate(lstm1_outputs, axis=0)
         lstm1_outputs.clear()
-        lstm2_cost, _, lstm2_accuracy, lstm2_state, lstm2_output = session.run(
+        lstm2_cost, _, lstm2_accuracy, lstm2_state, lstm2_output, merged = session.run(
             [
                 lstm2_model.cost,
                 lstm2_model.optimizer if is_tranning else tf.no_op(),
                 lstm2_model.accuracy,
                 lstm2_model.final_state,
                 lstm2_model.output,
+                lstm2_model.merged
             ],
             feed_dict={
                 lstm2_model.x: lstm2_x,
@@ -77,6 +81,7 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
                 lstm2_model.init_state: lstm2_state
             }
         )
+        writer.add_summary(merged, step)
         total_accuracy += rnn_accuracy
         if output_log and step % 100 == 0:
             with open('./record.txt', 'a') as f:
@@ -104,24 +109,16 @@ def main():
     with tf.variable_scope('sound_layers_model', reuse=None, initializer=initializer):
         train_models = dict(
             rnn_model=RNNLayer(True, time_slices=10, mfcc_features=512, classes=59),
-            lstm1_model=LSTM1Layer(True, time_slices=60, mfcc_features=512, classes=59),
-            lstm2_model=LSTM2Layer(True, time_slices=180, mfcc_features=128, classes=59)
+            lstm1_model=LSTM1Layer(True, time_slices=60, mfcc_features=128, classes=59),
+            lstm2_model=LSTM2Layer(True, time_slices=180, mfcc_features=64, classes=59)
         )
 
     with tf.variable_scope('sound_layers_model', reuse=True, initializer=initializer):
         eval_models = dict(
             rnn_model=RNNLayer(True, time_slices=10, mfcc_features=512, classes=59),
-            lstm1_model=LSTM1Layer(True, time_slices=60, mfcc_features=512, classes=59),
-            lstm2_model=LSTM2Layer(True, time_slices=180, mfcc_features=128, classes=59)
+            lstm1_model=LSTM1Layer(True, time_slices=60, mfcc_features=128, classes=59),
+            lstm2_model=LSTM2Layer(True, time_slices=180, mfcc_features=64, classes=59)
         )
-        merged = tf.summary.merge([
-            eval_models['rnn_model'].cost_summary,
-            eval_models['lstm1_model'].cost_summary,
-            eval_models['lstm2_model'].cost_summary,
-            eval_models['rnn_model'].accuracy_summary,
-            eval_models['lstm1_model'].accuracy_summary,
-            eval_models['lstm2_model'].accuracy_summary
-        ])
 
     saver = tf.train.Saver()
 
@@ -134,7 +131,6 @@ def main():
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=session, coord=coord)
 
-        writer = tf.summary.FileWriter('.', session.graph)
         best_accuracy = 0
         for i in range(NUM_EPOCH):
             with open('./record.txt', 'a') as f:
@@ -146,8 +142,6 @@ def main():
             with open('./record.txt', 'a') as f:
                 f.write('In iteration: %d\n' % (i + 1))
             print('Epoch: %d Validation Accuracy: %.3f' % (i + 1, valid_accuracy))
-
-            writer.add_summary(merged, i)
 
             if valid_accuracy > best_accuracy:
                 saver.save(session, check_point_path)

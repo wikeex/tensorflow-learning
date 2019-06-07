@@ -1,8 +1,8 @@
 import tensorflow as tf
 
 
-RNN_HIDDENSIZE = 512
-LSTM1_HIDDENSIZE = 128
+RNN_HIDDENSIZE = 128
+LSTM1_HIDDENSIZE = 64
 LSTM2_HIDDENSIZE = 64
 
 BATCH_SIZE = 1
@@ -15,7 +15,9 @@ RNN_RATE = 0.5
 LSTM1_RATE = 0.5
 LSTM2_RATE = 0.5
 
-LEARNING_STEP = 0.001
+RNN_LEARNING_STEP = 0.00025
+LSTM1_LEARNING_STEP = 0.0005
+LSTM2_LEARNING_STEP = 0.0001
 
 
 class RNNLayer:
@@ -76,7 +78,7 @@ class RNNLayer:
         if not is_training:
             return
 
-        self.optimizer = tf.train.AdamOptimizer(LEARNING_STEP).minimize(loss)
+        self.optimizer = tf.train.AdamOptimizer(RNN_LEARNING_STEP).minimize(loss)
 
 
 class LSTM1Layer:
@@ -135,7 +137,7 @@ class LSTM1Layer:
         if not is_training:
             return
 
-        self.optimizer = tf.train.AdamOptimizer(LEARNING_STEP).minimize(loss)
+        self.optimizer = tf.train.AdamOptimizer(LSTM1_LEARNING_STEP).minimize(loss)
 
 
 class LSTM2Layer:
@@ -196,4 +198,4 @@ class LSTM2Layer:
         if not is_training:
             return
 
-        self.optimizer = tf.train.AdamOptimizer(LEARNING_STEP).minimize(loss)
+        self.optimizer = tf.train.AdamOptimizer(LSTM2_LEARNING_STEP).minimize(loss)
