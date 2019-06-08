@@ -5,6 +5,7 @@ from SoundLayers.model import RNNLayer, LSTM1Layer, LSTM2Layer
 
 
 NUM_EPOCH = 500
+RNN_ITERS = 0
 
 
 def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
@@ -12,7 +13,10 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
     rnn_model = kwargs.get('rnn_model')
     lstm1_model = kwargs.get('lstm1_model')
     lstm2_model = kwargs.get('lstm2_model')
-    total_accuracy = 0.0
+
+    rnn_total_accu = []
+    lstm1_total_accu = []
+    lstm2_total_accu = []
 
     rnn_state = session.run([rnn_model.init_state])
     lstm1_state = session.run([lstm1_model.init_state])
@@ -27,7 +31,7 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
                 rnn_cost, _, rnn_accuracy, rnn_state, rnn_output = session.run(
                     [
                         rnn_model.cost,
-                        rnn_model.optimizer if is_tranning else rnn_model.cost,
+                        rnn_model.cost,
                         rnn_model.accuracy,
                         rnn_model.final_state,
                         rnn_model.output,
@@ -39,6 +43,7 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
                     }
                 )
                 rnn_outputs.append(rnn_output)
+                rnn_total_accu.append(rnn_accuracy)
                 if end is True:
                     rnn_outputs.extend([np.zeros([10, 128])] * (5 - rnn_slice))
                     break
@@ -59,7 +64,7 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
                 }
             )
             lstm1_outputs.append(lstm1_output)
-
+            lstm1_total_accu.append(lstm1_accuracy)
             if end is True:
                 lstm1_outputs.extend([np.zeros([60, 64])] * (2 - lstm1_slice))
                 break
@@ -80,7 +85,7 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
                 lstm2_model.init_state: lstm2_state
             }
         )
-        total_accuracy += lstm2_accuracy
+        lstm2_total_accu.append(lstm2_accuracy)
         if output_log and (step + 1) % 100 == 0:
             with open('./record.txt', 'a') as f:
                 f.write(
@@ -93,11 +98,54 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
                 %
                 (step + 1, rnn_accuracy, lstm1_accuracy, lstm2_accuracy)
             )
-    print(total_accuracy, epoch_size)
-    return total_accuracy / epoch_size, merged
+    rnn_avg_accuracy = np.mean(rnn_total_accu)
+    lstm1_avg_accuracy = np.mean(lstm1_total_accu)
+    lstm2_avg_accuracy = np.mean(lstm2_total_accu)
+    return rnn_avg_accuracy, lstm1_avg_accuracy, lstm2_avg_accuracy, merged
+
+
+def rnn_run(session, data, is_trainning, epoch_size, model):
+
+    total_accu = []
+    state = session.run([model.init_state])
+
+    for step in range(epoch_size):
+        x, y, end = next(data)
+        cost, _, accuracy, state, merged = session.run(
+            [
+                model.cost,
+                model.optimizer if is_trainning else model.cost,
+                model.accuracy,
+                model.final_state,
+                model.merged
+            ],
+            feed_dict={
+                model.x: x,
+                model.y: y,
+                model.init_state: state
+            }
+        )
+
+        total_accu.append(accuracy)
+        if is_trainning and (step + 1) % 100 == 0:
+            with open('./record.txt', 'a') as f:
+                f.write(
+                    'After %d steps, rnn accuracy is %.3f\n'
+                    %
+                    (step + 1, accuracy)
+                )
+            print(
+                'After %d steps, rnn accuracy is %.3f\n'
+                %
+                (step + 1, accuracy)
+            )
+    avg_accuracy = np.mean(total_accu)
+    return avg_accuracy, merged
 
 
 def main():
+    rnn_train_data = data.np_load(path='G:/sound_fixed', batch_type='train')
+
     train_data = data.np_load(path='G:/sound_npy', batch_type='train')
     valid_data = data.np_load(path='G:/sound_npy', batch_type='eval')
     test_data = data.np_load(path='G:/sound_npy', batch_type='test')
@@ -113,18 +161,14 @@ def main():
 
     initializer = tf.random_uniform_initializer(-0.05, 0.05)
     with tf.variable_scope('sound_layers_model', reuse=None, initializer=initializer):
-        train_models = dict(
-            rnn_model=RNNLayer(True, time_slices=10, mfcc_features=512, classes=59),
-            lstm1_model=LSTM1Layer(True, time_slices=60, mfcc_features=128, classes=59),
-            lstm2_model=LSTM2Layer(True, time_slices=180, mfcc_features=64, classes=59)
-        )
+        rnn_train_model = RNNLayer(True, time_slices=10, mfcc_features=512, classes=59)
+        lstm1_train_model = LSTM1Layer(True, time_slices=60, mfcc_features=128, classes=59)
+        lstm2_train_model = LSTM2Layer(True, time_slices=180, mfcc_features=64, classes=59)
 
     with tf.variable_scope('sound_layers_model', reuse=True, initializer=initializer):
-        eval_models = dict(
-            rnn_model=RNNLayer(True, time_slices=10, mfcc_features=512, classes=59),
-            lstm1_model=LSTM1Layer(True, time_slices=60, mfcc_features=128, classes=59),
-            lstm2_model=LSTM2Layer(True, time_slices=180, mfcc_features=64, classes=59)
-        )
+        rnn_eval_model = RNNLayer(True, time_slices=10, mfcc_features=512, classes=59)
+        lstm1_eval_model = LSTM1Layer(True, time_slices=60, mfcc_features=128, classes=59)
+        lstm2_eval_model = LSTM2Layer(True, time_slices=180, mfcc_features=64, classes=59)
 
     saver = tf.train.Saver()
 
@@ -138,27 +182,64 @@ def main():
         threads = tf.train.start_queue_runners(sess=session, coord=coord)
 
         writer = tf.summary.FileWriter('.', session.graph)
-        best_accuracy = 0
+        rnn_best_accuracy = 0
+        lstm2_best_accuracy = 0
+        for i in range(RNN_ITERS):
+            rnn_run(session, rnn_train_data, True, train_epoch_size, model=rnn_train_model)
+
+            accuracy, merged = rnn_run(
+                session, rnn_train_data, False, train_epoch_size, model=rnn_eval_model
+            )
+
+            print('RNN Iter: %d Validation Accuracy: %.3f' % (i, accuracy))
+            if rnn_best_accuracy < accuracy:
+                saver.save(session, check_point_path)
+                rnn_best_accuracy = accuracy
+
         for i in range(NUM_EPOCH):
             with open('./record.txt', 'a') as f:
                 f.write('In iteration: %d\n' % (i + 1))
             print('In iteration: %d' % (i + 1))
-            run_epoch(session, train_data, True, True, train_epoch_size, **train_models)
+            run_epoch(
+                session,
+                train_data,
+                True,
+                True,
+                train_epoch_size,
+                rnn_model=rnn_eval_model,
+                lstm1_model=lstm1_train_model,
+                lstm2_model=lstm2_train_model
+            )
 
-            valid_accuracy, merged = run_epoch(session, valid_data, False, False, valid_epoch_size, **eval_models)
+            rnn_accuracy, lstm1_accuracy, lstm2_accuracy, merged = run_epoch(
+                session, valid_data, False, False, valid_epoch_size,
+                rnn_model=rnn_eval_model,
+                lstm1_model=lstm1_eval_model,
+                lstm2_model=lstm2_eval_model
+            )
             with open('./record.txt', 'a') as f:
                 f.write('In iteration: %d\n' % (i + 1))
-            print('Epoch: %d Validation Accuracy: %.3f' % (i + 1, valid_accuracy))
+            print(
+                'Epoch: %d Validation Accuracy: %.3f, %.3f, %.3f'
+                %
+                (i + 1, rnn_accuracy, lstm1_accuracy, lstm2_accuracy)
+            )
 
             writer.add_summary(merged, i)
 
-            if valid_accuracy > best_accuracy:
+            if lstm2_accuracy > lstm2_best_accuracy:
                 saver.save(session, check_point_path)
+                lstm2_best_accuracy = lstm2_accuracy
 
-        test_accuracy, merged = run_epoch(session, test_data, False, False, test_epoch_size, **eval_models)
+        rnn_accuracy, lstm1_accuracy, lstm2_accuracy, merged = run_epoch(
+            session, test_data, False, False, test_epoch_size,
+            rnn_model=rnn_eval_model,
+            lstm1_model=lstm1_eval_model,
+            lstm2_model=lstm2_eval_model
+        )
         with open('./record.txt', 'a') as f:
             f.write('In iteration: %d\n' % (i + 1))
-        print('Test Accuracy: %.3f' % test_accuracy)
+        print('Test Accuracy: %.3f, %.3f, %.3f' % (rnn_accuracy, lstm1_accuracy, lstm2_accuracy))
 
         coord.request_stop()
         coord.join(threads)
