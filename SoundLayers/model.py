@@ -31,35 +31,22 @@ class RNNLayer:
         self.x = tf.placeholder(tf.float32, [features, time_slices])
         self.y = tf.placeholder(tf.float32, [classes])
 
-        x = tf.transpose(self.x, [1, 0])
+        x = tf.expand_dims(tf.transpose(self.x, [1, 0]), axis=0)
         y = tf.expand_dims(self.y, axis=0)
 
         # RNN层
-        rnn_layers = []
-        for _ in range(RNN_LAYERS):
-            rnn_cell = tf.nn.rnn_cell.BasicRNNCell(num_units=RNN_HIDDENSIZE)
-            if is_training:
-                rnn_cell = tf.contrib.rnn.DropoutWrapper(rnn_cell, output_keep_prob=1 - RNN_RATE)
-            rnn_layers.append(rnn_cell)
+        fw_cell = tf.nn.rnn_cell.BasicRNNCell(num_units=RNN_HIDDENSIZE)
+        bw_cell = tf.nn.rnn_cell.BasicRNNCell(num_units=RNN_HIDDENSIZE)
+        if is_training:
+            bw_cell = tf.contrib.rnn.DropoutWrapper(bw_cell, output_keep_prob=1 - RNN_RATE)
+            fw_cell = tf.contrib.rnn.DropoutWrapper(fw_cell, output_keep_prob=1 - RNN_RATE)
 
-        rnn_block = tf.contrib.rnn.MultiRNNCell(rnn_layers)
+        outputs, _, _ = tf.contrib.rnn.static_bidirectional_rnn(fw_cell, bw_cell, x, dtype=tf.float32)
 
-        self.init_state = rnn_block.zero_state(BATCH_SIZE, tf.float32)
+        self.output = tf.concat(outputs, axis=0)
+        logits_input = tf.reshape(self.output, [-1, 2 * RNN_HIDDENSIZE * time_slices])
 
-        rnn_layers_outputs = []
-        rnn_state = self.init_state
-
-        with tf.variable_scope('rnn_layer'):
-            for step in range(time_slices):
-                if step > 0:
-                    tf.get_variable_scope().reuse_variables()
-                output, rnn_state = rnn_block(tf.expand_dims(x[step, :], axis=0), rnn_state)
-                rnn_layers_outputs.append(output)
-        self.output = tf.concat(rnn_layers_outputs, axis=0)
-        logits_input = tf.reshape(self.output, [-1, RNN_HIDDENSIZE * time_slices])
-        self.final_state = rnn_state
-
-        softmax_weight = tf.get_variable('rnn_softmax_weight', [RNN_HIDDENSIZE * time_slices, classes])
+        softmax_weight = tf.get_variable('rnn_softmax_weight', [2 * RNN_HIDDENSIZE * time_slices, classes])
         softmax_bias = tf.get_variable('rnn_softmax_bias', [classes])
 
         logits = tf.matmul(logits_input, softmax_weight) + softmax_bias
@@ -201,3 +188,10 @@ class LSTM2Layer:
             return
 
         self.optimizer = tf.train.AdamOptimizer(LSTM2_LEARNING_STEP).minimize(loss)
+
+
+def BiRNN(x):
+    lstm_fw_cell = tf.nn.rnn_cell.BasicRNNCell(RNN_HIDDENSIZE)
+    lstm_bw_cell = tf.nn.rnn_cell.BasicRNNCell(RNN_HIDDENSIZE)
+
+    outputs, _, _ = tf.contrib.rnn.static_bidirectional_rnn(lstm_fw_cell, lstm_bw_cell, x, dtype=tf.float32)
