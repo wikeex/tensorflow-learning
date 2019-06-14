@@ -37,7 +37,7 @@ class RNNLayer:
         # RNN层
         rnn_layers = []
         for _ in range(RNN_LAYERS):
-            rnn_cell = tf.nn.rnn_cell.BasicRNNCell(num_units=RNN_HIDDENSIZE)
+            rnn_cell = tf.nn.rnn_cell.GRUCell(num_units=RNN_HIDDENSIZE)
             if is_training:
                 rnn_cell = tf.contrib.rnn.DropoutWrapper(rnn_cell, output_keep_prob=1 - RNN_RATE)
             rnn_layers.append(rnn_cell)
@@ -96,7 +96,7 @@ class LSTM1Layer:
         # lstm1层处理3s的信息，3个lstm1层输出拼接成9s信息送往lstm2层
         lstm1_layers = []
         for _ in range(RNN_LAYERS):
-            lstm1_cell = tf.contrib.rnn.BasicLSTMCell(num_units=LSTM1_HIDDENSIZE, state_is_tuple=True)
+            lstm1_cell = tf.nn.rnn_cell.GRUCell(num_units=LSTM1_HIDDENSIZE, state_is_tuple=True)
             if is_training:
                 lstm1_cell = tf.contrib.rnn.DropoutWrapper(lstm1_cell, output_keep_prob=1 - RNN_RATE)
             lstm1_layers.append(lstm1_cell)
@@ -156,7 +156,7 @@ class LSTM2Layer:
         # 可能需要每一层单独建立
         lstm2_layers = []
         for _ in range(RNN_LAYERS):
-            lstm2_cell = tf.contrib.rnn.BasicLSTMCell(num_units=LSTM2_HIDDENSIZE, state_is_tuple=True)
+            lstm2_cell = tf.nn.rnn_cell.GRUCell(num_units=LSTM2_HIDDENSIZE, state_is_tuple=True)
             if is_training:
                 lstm2_cell = tf.contrib.rnn.DropoutWrapper(lstm2_cell, output_keep_prob=1 - RNN_RATE)
             lstm2_layers.append(lstm2_cell)
