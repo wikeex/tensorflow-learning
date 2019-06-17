@@ -5,7 +5,7 @@ from SoundLayers.model import RNNLayer, LSTM1Layer, LSTM2Layer
 
 
 NUM_EPOCH = 500
-RNN_ITERS = 0
+RNN_ITERS = 500
 LSTM1_ITERS = 500
 
 
@@ -25,7 +25,7 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
 
     for step in range(epoch_size):
         lstm1_outputs = []
-        for lstm1_slice in range(3):
+        for lstm1_slice in range(2):
             rnn_outputs = []
             for rnn_slice in range(6):
                 x, y, end = next(data)
@@ -46,7 +46,7 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
                 rnn_outputs.append(rnn_output)
                 rnn_total_accu.append(rnn_accuracy)
                 if end is True:
-                    rnn_outputs.extend([np.zeros([10, 128])] * (5 - rnn_slice))
+                    rnn_outputs.extend([np.zeros([10, 100])] * (5 - rnn_slice))
                     break
             lstm1_x = np.concatenate(rnn_outputs, axis=0)
             rnn_outputs.clear()
@@ -67,7 +67,7 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
             lstm1_outputs.append(lstm1_output)
             lstm1_total_accu.append(lstm1_accuracy)
             if end is True:
-                lstm1_outputs.extend([np.zeros([60, 64])] * (2 - lstm1_slice))
+                lstm1_outputs.extend([np.zeros([60, 150])] * (2 - lstm1_slice))
                 break
         lstm2_x = np.concatenate(lstm1_outputs, axis=0)
         lstm1_outputs.clear()
@@ -173,7 +173,7 @@ def lstm1_run(session, data, is_training, epoch_size, **kwargs):
             rnn_outputs.append(rnn_output)
             rnn_total_accu.append(rnn_accuracy)
             if end is True:
-                rnn_outputs.extend([np.zeros([10, 128])] * (5 - rnn_slice))
+                rnn_outputs.extend([np.zeros([10, 100])] * (5 - rnn_slice))
                 break
         lstm1_x = np.concatenate(rnn_outputs, axis=0)
         rnn_outputs.clear()
@@ -229,13 +229,13 @@ def main():
     initializer = tf.random_uniform_initializer(-0.05, 0.05)
     with tf.variable_scope('sound_layers_model', reuse=None, initializer=initializer):
         rnn_train_model = RNNLayer(True, time_slices=10, mfcc_features=512, classes=59)
-        lstm1_train_model = LSTM1Layer(True, time_slices=60, mfcc_features=128, classes=59)
-        lstm2_train_model = LSTM2Layer(True, time_slices=180, mfcc_features=64, classes=59)
+        lstm1_train_model = LSTM1Layer(True, time_slices=60, mfcc_features=100, classes=59)
+        lstm2_train_model = LSTM2Layer(True, time_slices=180, mfcc_features=150, classes=59)
 
     with tf.variable_scope('sound_layers_model', reuse=True, initializer=initializer):
         rnn_eval_model = RNNLayer(True, time_slices=10, mfcc_features=512, classes=59)
-        lstm1_eval_model = LSTM1Layer(True, time_slices=60, mfcc_features=128, classes=59)
-        lstm2_eval_model = LSTM2Layer(True, time_slices=180, mfcc_features=64, classes=59)
+        lstm1_eval_model = LSTM1Layer(True, time_slices=60, mfcc_features=100, classes=59)
+        lstm2_eval_model = LSTM2Layer(True, time_slices=180, mfcc_features=150, classes=59)
 
     saver = tf.train.Saver()
 
