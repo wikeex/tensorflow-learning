@@ -5,8 +5,8 @@ from SoundLayers.model import RNNLayer, LSTM1Layer, LSTM2Layer
 
 
 NUM_EPOCH = 500
-RNN_ITERS = 500
-LSTM1_ITERS = 500
+RNN_ITERS = 0
+LSTM1_ITERS = 0
 
 
 def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
@@ -25,7 +25,7 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
 
     for step in range(epoch_size):
         lstm1_outputs = []
-        for lstm1_slice in range(2):
+        for lstm1_slice in range(3):
             rnn_outputs = []
             for rnn_slice in range(6):
                 x, y, end = next(data)
