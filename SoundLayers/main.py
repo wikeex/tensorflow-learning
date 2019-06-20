@@ -4,12 +4,12 @@ from SoundLayers import data
 from SoundLayers.model import RNNLayer, LSTM1Layer, LSTM2Layer
 
 
-NUM_EPOCH = 500
+LSTM2_ITERS = 500
 RNN_ITERS = 0
 LSTM1_ITERS = 0
 
 
-def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
+def lstm2_run(session, data, is_tranning, output_log, epoch_size, **kwargs):
 
     rnn_model = kwargs.get('rnn_model')
     lstm1_model = kwargs.get('lstm1_model')
@@ -25,14 +25,12 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
 
     for step in range(epoch_size):
         lstm1_outputs = []
-        for lstm1_slice in range(3):
+        for lstm1_slice in range(2):
             rnn_outputs = []
             for rnn_slice in range(6):
                 x, y, end = next(data)
-                rnn_cost, _, rnn_accuracy, rnn_state, rnn_output = session.run(
+                rnn_accuracy, rnn_state, rnn_output = session.run(
                     [
-                        rnn_model.cost,
-                        rnn_model.cost,
                         rnn_model.accuracy,
                         rnn_model.final_state,
                         rnn_model.output,
@@ -50,10 +48,8 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
                     break
             lstm1_x = np.concatenate(rnn_outputs, axis=0)
             rnn_outputs.clear()
-            lstm1_cost, _, lstm1_accuracy, lstm1_state, lstm1_output = session.run(
+            lstm1_accuracy, lstm1_state, lstm1_output = session.run(
                 [
-                    lstm1_model.cost,
-                    lstm1_model.optimizer if is_tranning else lstm1_model.cost,
                     lstm1_model.accuracy,
                     lstm1_model.final_state,
                     lstm1_model.output,
@@ -67,7 +63,7 @@ def run_epoch(session, data, is_tranning, output_log, epoch_size, **kwargs):
             lstm1_outputs.append(lstm1_output)
             lstm1_total_accu.append(lstm1_accuracy)
             if end is True:
-                lstm1_outputs.extend([np.zeros([60, 150])] * (2 - lstm1_slice))
+                lstm1_outputs.extend([np.zeros([60, 150])] * (1 - lstm1_slice))
                 break
         lstm2_x = np.concatenate(lstm1_outputs, axis=0)
         lstm1_outputs.clear()
@@ -180,7 +176,7 @@ def lstm1_run(session, data, is_training, epoch_size, **kwargs):
         lstm1_cost, _, lstm1_accuracy, lstm1_state, merged = session.run(
             [
                 lstm1_model.cost,
-                lstm1_model.optimizer,
+                lstm1_model.optimizer if is_training else lstm1_model.cost,
                 lstm1_model.accuracy,
                 lstm1_model.final_state,
                 lstm1_model.merged
@@ -230,12 +226,12 @@ def main():
     with tf.variable_scope('sound_layers_model', reuse=None, initializer=initializer):
         rnn_train_model = RNNLayer(True, time_slices=10, mfcc_features=512, classes=59)
         lstm1_train_model = LSTM1Layer(True, time_slices=60, mfcc_features=100, classes=59)
-        lstm2_train_model = LSTM2Layer(True, time_slices=180, mfcc_features=150, classes=59)
+        lstm2_train_model = LSTM2Layer(True, time_slices=120, mfcc_features=150, classes=59)
 
     with tf.variable_scope('sound_layers_model', reuse=True, initializer=initializer):
-        rnn_eval_model = RNNLayer(True, time_slices=10, mfcc_features=512, classes=59)
-        lstm1_eval_model = LSTM1Layer(True, time_slices=60, mfcc_features=100, classes=59)
-        lstm2_eval_model = LSTM2Layer(True, time_slices=180, mfcc_features=150, classes=59)
+        rnn_eval_model = RNNLayer(False, time_slices=10, mfcc_features=512, classes=59)
+        lstm1_eval_model = LSTM1Layer(False, time_slices=60, mfcc_features=100, classes=59)
+        lstm2_eval_model = LSTM2Layer(False, time_slices=120, mfcc_features=150, classes=59)
 
     saver = tf.train.Saver()
 
@@ -277,22 +273,22 @@ def main():
                 saver.save(session, check_point_path)
                 lstm1_best_accuracy = lstm1_accuracy
 
-        for i in range(NUM_EPOCH):
+        for i in range(LSTM2_ITERS):
             with open('./record.txt', 'a') as f:
                 f.write('In iteration: %d\n' % (i + 1))
             print('In iteration: %d' % (i + 1))
-            run_epoch(
+            lstm2_run(
                 session,
                 train_data,
                 True,
                 True,
                 train_epoch_size,
                 rnn_model=rnn_eval_model,
-                lstm1_model=lstm1_train_model,
+                lstm1_model=lstm1_eval_model,
                 lstm2_model=lstm2_train_model
             )
 
-            rnn_accuracy, lstm1_accuracy, lstm2_accuracy, merged = run_epoch(
+            rnn_accuracy, lstm1_accuracy, lstm2_accuracy, merged = lstm2_run(
                 session, valid_data, False, False, valid_epoch_size,
                 rnn_model=rnn_eval_model,
                 lstm1_model=lstm1_eval_model,
@@ -312,7 +308,7 @@ def main():
                 saver.save(session, check_point_path)
                 lstm2_best_accuracy = lstm2_accuracy
 
-        rnn_accuracy, lstm1_accuracy, lstm2_accuracy, merged = run_epoch(
+        rnn_accuracy, lstm1_accuracy, lstm2_accuracy, merged = lstm2_run(
             session, test_data, False, False, test_epoch_size,
             rnn_model=rnn_eval_model,
             lstm1_model=lstm1_eval_model,
