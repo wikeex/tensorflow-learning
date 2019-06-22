@@ -4,9 +4,9 @@ from SoundLayers import data
 from SoundLayers.model import RNNLayer, LSTM1Layer, LSTM2Layer
 
 
-LSTM2_ITERS = 500
-RNN_ITERS = 0
-LSTM1_ITERS = 0
+LSTM2_ITERS = 200
+RNN_ITERS = 2000
+LSTM1_ITERS = 500
 
 
 def lstm2_run(session, data, is_tranning, output_log, epoch_size, **kwargs):
@@ -207,7 +207,6 @@ def lstm1_run(session, data, is_training, epoch_size, **kwargs):
 
 
 def main():
-    rnn_train_data = data.np_load(path='G:/sound_fixed', batch_type='train')
 
     train_data = data.np_load(path='G:/sound_npy', batch_type='train')
     valid_data = data.np_load(path='G:/sound_npy', batch_type='eval')
@@ -249,10 +248,10 @@ def main():
         lstm1_best_accuracy = 0
         lstm2_best_accuracy = 0
         for i in range(RNN_ITERS):
-            rnn_run(session, rnn_train_data, True, train_epoch_size, model=rnn_train_model)
+            rnn_run(session, train_data, True, train_epoch_size, model=rnn_train_model)
 
             accuracy, merged = rnn_run(
-                session, rnn_train_data, False, train_epoch_size, model=rnn_eval_model
+                session, valid_data, False, train_epoch_size, model=rnn_eval_model
             )
 
             print('RNN Iter: %d Validation Accuracy: %.3f' % (i, accuracy))
@@ -265,7 +264,7 @@ def main():
                       lstm1_model=lstm1_train_model)
 
             rnn_accuracy, lstm1_accuracy, merged = lstm1_run(
-                session, rnn_train_data, False, train_epoch_size, rnn_model=rnn_eval_model, lstm1_model=lstm1_eval_model
+                session, valid_data, False, train_epoch_size, rnn_model=rnn_eval_model, lstm1_model=lstm1_eval_model
             )
 
             print('LSTM1 Iter: %d Validation Accuracy: %.3f, %.3f' % (i, rnn_accuracy, lstm1_accuracy))
