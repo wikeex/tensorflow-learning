@@ -4,6 +4,17 @@ import librosa
 import math
 from random import shuffle
 import shutil
+import pyaudio
+from audioread.rawread import RawAudioFile
+from librosa.core import resample, to_mono
+from librosa import util
+from queue import Queue
+import wave
+from io import BytesIO
+from wave import Wave_write
+
+
+q = Queue(maxsize=10)
 
 
 def rename():
@@ -19,7 +30,7 @@ def rename():
             )
 
 
-def split_database():
+def split_dataset():
     """
     按所给目录下文件的数量将文件划分为训练集、评估集和测试集三个集合。
     :return:
@@ -134,7 +145,133 @@ def np_load(batch_type, path='G:/sound_fixed/'):
                 yield np_data_padding, np.array(label, dtype=np.float32), end
 
 
+def real_time_sound():
+    CHUNK = 1000
+    FORMAT = pyaudio.paInt16  # 16bit编码格式
+    CHANNELS = 1  # 单声道
+    RATE = 20000  # 22.05khz采样频率
+
+    try:
+        p = pyaudio.PyAudio()
+        # 创建音频流
+        stream = p.open(format=FORMAT,  # 音频流wav格式
+                        channels=CHANNELS,  # 单声道
+                        rate=RATE,  # 22.05khz采样频率
+                        input=True,
+                        frames_per_buffer=CHUNK)
+
+        print("Start Recording...")
+
+        # 录制音频数据
+        byte_stream = BytesIO()
+        with Wave_write(byte_stream) as ww:
+            ww.setnchannels(CHANNELS)
+            ww.setframerate(RATE)
+            ww.setsampwidth(p.get_sample_size(FORMAT))
+            while True:
+                data = stream.read(CHUNK)
+
+                ww.writeframes(data)
+                bytes_io = BytesIO(byte_stream.getvalue())
+                y, sr = stream_to_np(bytes_io, sr=20000)
+                mel = librosa.feature.melspectrogram(y, sr=20000, n_fft=2205, hop_length=1102, n_mels=512)
+                yield mel
+    except Exception:
+        raise
+    finally:
+        # 录制完成
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+
+def stream_to_np(bytes_io, sr=22050, mono=True, offset=0.0, duration=None, dtype=np.float32, res_type='kaiser_best'):
+    y = []
+
+    with RawAudioStream(bytes_io) as input_file:
+        sr_native = input_file.samplerate
+        n_channels = input_file.channels
+
+        s_start = int(np.round(sr_native * offset)) * n_channels
+
+        if duration is None:
+            s_end = np.inf
+        else:
+            s_end = s_start + (int(np.round(sr_native * duration))
+                               * n_channels)
+
+        n = 0
+
+        for frame in input_file:
+            frame = util.buf_to_float(frame, dtype=dtype)
+            n_prev = n
+            n = n + len(frame)
+
+            if n < s_start:
+                # offset is after the current frame
+                # keep reading
+                continue
+
+            if s_end < n_prev:
+                # we're off the end.  stop reading
+                break
+
+            if s_end < n:
+                # the end is in this frame.  crop.
+                frame = frame[:s_end - n_prev]
+
+            if n_prev <= s_start <= n:
+                # beginning is in this frame
+                frame = frame[(s_start - n_prev):]
+
+            # tack on the current frame
+            y.append(frame)
+
+        if y:
+            y = np.concatenate(y)
+
+            if n_channels > 1:
+                y = y.reshape((-1, n_channels)).T
+                if mono:
+                    y = to_mono(y)
+
+            if sr is not None:
+                y = resample(y, sr_native, sr, res_type=res_type)
+
+            else:
+                sr = sr_native
+
+        # Final cleanup for dtype and contiguity
+        y = np.ascontiguousarray(y, dtype=dtype)
+
+        return y, sr
+
+
+class RawAudioStream(RawAudioFile):
+    def __init__(self, data):
+
+        self._file = wave.open(data)
+
+        self._needs_byteswap = False
+        self._check()
+        return
+
+    def close(self):
+        self._file.close()
+
+
+class MyWaveWriter(Wave_write):
+    def __init__(self, b):
+        self._i_opened_the_file = None
+        if isinstance(b, BytesIO):
+            self._i_opened_the_file = b
+        try:
+            self.initfp(b)
+        except Exception:
+            if self._i_opened_the_file:
+                b.close()
+            raise
+
+
 if __name__ == '__main__':
-    n = np_load(batch_type='train', path='G:/sound_npy/')
-    while 1:
-        print(next(n))
+    real_time_sound()
