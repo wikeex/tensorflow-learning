@@ -186,6 +186,18 @@ def real_time_sound():
 
 
 def stream_to_np(bytes_io, sr=22050, mono=True, offset=0.0, duration=None, dtype=np.float32, res_type='kaiser_best'):
+    """
+    重写了librosa.load函数，把文件参数改成bytesIO类型，并把audioread.audio_open替换为自定义的RawAudioStream类，
+    因为前者需要文件路径作为参数。
+    :param bytes_io:
+    :param sr:
+    :param mono:
+    :param offset:
+    :param duration:
+    :param dtype:
+    :param res_type:
+    :return:
+    """
     y = []
 
     with RawAudioStream(bytes_io) as input_file:
@@ -248,6 +260,9 @@ def stream_to_np(bytes_io, sr=22050, mono=True, offset=0.0, duration=None, dtype
 
 
 class RawAudioStream(RawAudioFile):
+    """
+    继承rawread模块中RawAudioFile类，并把构造函数中文件路径参数替换为bytesIO类型，wave.open同样可以打开。
+    """
     def __init__(self, data):
 
         self._file = wave.open(data)
@@ -261,6 +276,11 @@ class RawAudioStream(RawAudioFile):
 
 
 class MyWaveWriter(Wave_write):
+    """
+    继承wave模块中Wave_write类，Wave_write默认以文件路径作为参数，如果我们从麦克风传来的数据再通过一次IO写入到硬盘上，那么IO延迟会
+    严重影响数据的实时性，并且对机器资源造成浪费。所以我们重写Wave_write类，把文件写入到硬盘文件改成写入到内存的bytesIO中，从而提升
+    读写速度。
+    """
     def __init__(self, b):
         self._i_opened_the_file = None
         if isinstance(b, BytesIO):
