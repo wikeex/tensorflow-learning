@@ -19,12 +19,11 @@ def rename():
             )
 
 
-def split_dataset():
+def split_dataset(basedir):
     """
     按所给目录下文件的数量将文件划分为训练集、评估集和测试集三个集合。
     :return:
     """
-    basedir = 'G:/sound_npy/'
     folders = os.listdir(basedir)
     name_dict = {}
     for file_name in folders:
@@ -72,34 +71,34 @@ def one_hot_from_files():
     return one_hot
 
 
-def mel_batch_generator(path='G:/sound/', fixed=True):
-    files = os.listdir(path)
+def mel_batch_generator(slice_size, dest_path, source_path='G:/sound/', fixed=True):
+    files = os.listdir(source_path)
 
     for file in files:
         print("loaded batch {0}".format(file))
         if not file.endswith('.wav'):
             continue
-        wave, sr = librosa.load(path+file, sr=22050)
+        wave, sr = librosa.load(source_path+file, sr=22050)
         mel = librosa.feature.melspectrogram(wave, n_fft=2205, hop_length=1102, n_mels=512)
 
         if fixed:
-            division = math.ceil(mel.shape[1] / 80)
+            division = math.ceil(mel.shape[1] / slice_size)
             mel_split = np.array_split(mel, division, axis=1)
             for i, np_data in enumerate(mel_split):
                 index = str(i)
 
                 np_data_fixed = np.pad(
                     np_data,
-                    ((0, 0), (0, 80 - len(np_data[0]))),
+                    ((0, 0), (0, slice_size - len(np_data[0]))),
                     mode='constant',
                     constant_values=0
                 )
 
                 preffix = file.split('.')[0]
-                name = 'G:/sound_fixed/' + preffix + '_' + index + '.npy'
+                name = dest_path + preffix + '_' + index + '.npy'
                 np.save(name, np_data_fixed)
         else:
-            name = 'G:/sound_npy/' + file.split('.')[0] + '.npy'
+            name = dest_path + file.split('.')[0] + '.npy'
             np.save(name, mel)
 
 
@@ -135,4 +134,4 @@ def np_load(batch_type, path='G:/sound_fixed/'):
 
 
 if __name__ == '__main__':
-    np_load('tain')
+    split_dataset(basedir='F:/sound_half_second/')
