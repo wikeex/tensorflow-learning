@@ -5,7 +5,7 @@ from SoundLayers.model import RNNLayer, LSTM1Layer, LSTM2Layer
 
 
 LSTM2_ITERS = 200
-RNN_ITERS = 2000
+RNN_ITERS = 1000
 LSTM1_ITERS = 500
 
 
@@ -208,6 +208,7 @@ def lstm1_run(session, data, is_training, epoch_size, **kwargs):
 
 def main():
 
+    rnn_train_data = data.np_load(path='F:/sound_half_second', batch_type='train')
     train_data = data.np_load(path='G:/sound_npy', batch_type='train')
     valid_data = data.np_load(path='G:/sound_npy', batch_type='eval')
     test_data = data.np_load(path='G:/sound_npy', batch_type='test')
@@ -247,8 +248,10 @@ def main():
         rnn_best_accuracy = 0
         lstm1_best_accuracy = 0
         lstm2_best_accuracy = 0
+
+        # rnn训练循环，rnn训练数据采用混淆数据，保持低级层次训练结果的鲁棒性
         for i in range(RNN_ITERS):
-            rnn_run(session, train_data, True, train_epoch_size, model=rnn_train_model)
+            rnn_run(session, rnn_train_data, True, train_epoch_size, model=rnn_train_model)
 
             accuracy, merged = rnn_run(
                 session, valid_data, False, train_epoch_size, model=rnn_eval_model
@@ -259,6 +262,7 @@ def main():
                 saver.save(session, check_point_path)
                 rnn_best_accuracy = accuracy
 
+        # lstm1训练循环
         for i in range(LSTM1_ITERS):
             lstm1_run(session, train_data, True, train_epoch_size, rnn_model=rnn_train_model,
                       lstm1_model=lstm1_train_model)
@@ -272,6 +276,7 @@ def main():
                 saver.save(session, check_point_path)
                 lstm1_best_accuracy = lstm1_accuracy
 
+        # lstm2训练循环
         for i in range(LSTM2_ITERS):
             with open('./record.txt', 'a') as f:
                 f.write('In iteration: %d\n' % (i + 1))
