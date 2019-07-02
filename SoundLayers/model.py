@@ -64,6 +64,7 @@ class RNNLayer:
 
         logits = tf.matmul(logits_input, softmax_weight) + softmax_bias
         logits_softmax = tf.nn.softmax(logits, axis=1)
+        self.logits_softmax = logits_softmax
         tf.add_to_collection('rnn_y', logits_softmax)
 
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(y, logits))
@@ -125,6 +126,7 @@ class LSTM1Layer:
 
         logits = tf.matmul(logits_input, softmax_weight) + softmax_bias
         logits_softmax = tf.nn.softmax(logits, axis=1)
+        self.logits_softmax = logits_softmax
         tf.add_to_collection('lstm1_y', logits_softmax)
 
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(y, logits))
@@ -187,6 +189,7 @@ class LSTM2Layer:
 
         logits = tf.matmul(logits_input, softmax_weight) + softmax_bias
         logits_softmax = tf.nn.softmax(logits, axis=1)
+        self.logits_softmax = logits_softmax
         tf.add_to_collection('lstm2_y', logits_softmax)
 
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(y, logits))

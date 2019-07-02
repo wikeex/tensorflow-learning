@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-from SoundLayers import data
+from SoundLayers import real_time_data
 from SoundLayers.model import RNNLayer, LSTM1Layer, LSTM2Layer
 
 
@@ -14,60 +14,64 @@ def lstm2_run(session, data, **kwargs):
     lstm1_state = session.run([lstm1_model.init_state])
     lstm2_state = session.run([lstm2_model.init_state])
 
-    lstm1_outputs = []
-    for lstm1_slice in range(2):
-        rnn_outputs = []
-        for rnn_slice in range(6):
-            x = next(data)
-            rnn_accuracy, rnn_state, rnn_output = session.run(
+    while True:
+        lstm1_outputs = []
+        for lstm1_slice in range(2):
+            rnn_outputs = []
+            for rnn_slice in range(6):
+                x = next(data)
+                y = np.zeros((59,), dtype=np.float32)
+                rnn_state, rnn_output, rnn_result = session.run(
+                    [
+                        rnn_model.final_state,
+                        rnn_model.output,
+                        rnn_model.logits_softmax
+                    ],
+                    feed_dict={
+                        rnn_model.x: x,
+                        rnn_model.y: y,
+                        rnn_model.init_state: rnn_state
+                    }
+                )
+                rnn_outputs.append(rnn_output)
+                print(rnn_result)
+            lstm1_x = np.concatenate(rnn_outputs, axis=0)
+            rnn_outputs.clear()
+            lstm1_state, lstm1_output, lstm1_result = session.run(
                 [
-                    rnn_model.accuracy,
-                    rnn_model.final_state,
-                    rnn_model.output,
+                    lstm1_model.final_state,
+                    lstm1_model.output,
+                    lstm1_model.logits_softmax
                 ],
                 feed_dict={
-                    rnn_model.x: x,
-                    rnn_model.init_state: rnn_state
+                    lstm1_model.x: lstm1_x,
+                    lstm1_model.y: y,
+                    lstm1_model.init_state: lstm1_state
                 }
             )
-            rnn_outputs.append(rnn_output)
-
-        lstm1_x = np.concatenate(rnn_outputs, axis=0)
-        rnn_outputs.clear()
-        lstm1_accuracy, lstm1_state, lstm1_output = session.run(
-            [
-                lstm1_model.accuracy,
-                lstm1_model.final_state,
-                lstm1_model.output,
-            ],
-            feed_dict={
-                lstm1_model.x: lstm1_x,
-                lstm1_model.init_state: lstm1_state
-            }
-        )
-        lstm1_outputs.append(lstm1_output)
-
+            lstm1_outputs.append(lstm1_output)
+            print(lstm1_result)
         lstm2_x = np.concatenate(lstm1_outputs, axis=0)
         lstm1_outputs.clear()
-        lstm2_accuracy, lstm2_state = session.run(
+        lstm2_state, lstm2_output, lstm2_result = session.run(
             [
-                lstm2_model.accuracy,
                 lstm2_model.final_state,
+                lstm2_model.output,
+                lstm2_model.logits_softmax
             ],
             feed_dict={
                 lstm2_model.x: lstm2_x,
+                lstm2_model.y: y,
                 lstm2_model.init_state: lstm2_state
             }
         )
-
-    return
+        print(lstm2_result)
+        yield rnn_result, lstm1_result, lstm2_result
 
 
 def main():
 
-    batch = data.real_time_sound()
-
-    valid_epoch_size = 100
+    data = real_time_data.real_time_sound()
 
     restore_check_point = True
     check_point_path = './model/sound_test'
@@ -87,24 +91,14 @@ def main():
         else:
             tf.global_variables_initializer().run()
 
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(sess=session, coord=coord)
-
-        while True:
-
-            lstm2_run(
-                session, batch, False,
-                rnn_model=rnn_eval_model,
-                lstm1_model=lstm1_eval_model,
-                lstm2_model=lstm2_eval_model
-            )
-
-        coord.request_stop()
-        coord.join(threads)
+        lstm2_run(
+            session, data,
+            rnn_model=rnn_eval_model,
+            lstm1_model=lstm1_eval_model,
+            lstm2_model=lstm2_eval_model
+        )
 
 
 if __name__ == '__main__':
     main()
-
-
 
