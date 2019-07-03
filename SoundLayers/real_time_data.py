@@ -27,13 +27,15 @@ def real_time_sound():
         print("Start Recording...")
 
         # 录制音频数据
-        byte_stream = BytesIO()
-        with Wave_write(byte_stream) as ww:
-            ww.setnchannels(CHANNELS)
-            ww.setframerate(RATE)
-            ww.setsampwidth(p.get_sample_size(FORMAT))
-            mels = []
-            while True:
+
+        mels = []
+        while True:
+            byte_stream = BytesIO()
+            with Wave_write(byte_stream) as ww:
+                ww.setnchannels(CHANNELS)
+                ww.setframerate(RATE)
+                ww.setsampwidth(p.get_sample_size(FORMAT))
+
                 data = stream.read(CHUNK)
 
                 ww.writeframes(data)
@@ -46,6 +48,7 @@ def real_time_sound():
                     yield output
                 else:
                     mels.append(mel)
+
     except Exception:
         raise
     finally:
