@@ -32,6 +32,7 @@ def real_time_sound():
             ww.setnchannels(CHANNELS)
             ww.setframerate(RATE)
             ww.setsampwidth(p.get_sample_size(FORMAT))
+            mels = []
             while True:
                 data = stream.read(CHUNK)
 
@@ -39,7 +40,12 @@ def real_time_sound():
                 bytes_io = BytesIO(byte_stream.getvalue())
                 y, sr = stream_to_np(bytes_io, sr=20000)
                 mel = librosa.feature.melspectrogram(y, sr=20000, n_fft=2205, hop_length=1102, n_mels=512)
-                yield mel
+                if len(mels) >= 10:
+                    output = np.concatenate(mels, axis=1)
+                    mels.clear()
+                    yield output
+                else:
+                    mels.append(mel)
     except Exception:
         raise
     finally:

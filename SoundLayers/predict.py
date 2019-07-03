@@ -66,7 +66,6 @@ def lstm2_run(session, data, **kwargs):
             }
         )
         print(lstm2_result)
-        yield rnn_result, lstm1_result, lstm2_result
 
 
 def main():
@@ -77,6 +76,10 @@ def main():
     check_point_path = './model/sound_test'
 
     initializer = tf.random_uniform_initializer(-0.05, 0.05)
+    with tf.variable_scope('sound_layers_model', reuse=None, initializer=initializer):
+        rnn_train_model = RNNLayer(True, time_slices=10, mfcc_features=512, classes=59)
+        lstm1_train_model = LSTM1Layer(True, time_slices=60, mfcc_features=100, classes=59)
+        lstm2_train_model = LSTM2Layer(True, time_slices=120, mfcc_features=150, classes=59)
 
     with tf.variable_scope('sound_layers_model', reuse=True, initializer=initializer):
         rnn_eval_model = RNNLayer(False, time_slices=10, mfcc_features=512, classes=59)
