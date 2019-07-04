@@ -27,7 +27,6 @@ def real_time_sound():
         print("Start Recording...")
 
         # 录制音频数据
-
         mels = []
         while True:
             byte_stream = BytesIO()

@@ -1,10 +1,10 @@
 import tensorflow as tf
 import numpy as np
-from SoundLayers import real_time_data
+from SoundLayers import real_time_data, data
 from SoundLayers.model import RNNLayer, LSTM1Layer, LSTM2Layer
 
 
-def lstm2_run(session, data, **kwargs):
+def lstm2_run(session, data_iter, **kwargs):
 
     rnn_model = kwargs.get('rnn_model')
     lstm1_model = kwargs.get('lstm1_model')
@@ -14,12 +14,14 @@ def lstm2_run(session, data, **kwargs):
     lstm1_state = session.run([lstm1_model.init_state])
     lstm2_state = session.run([lstm2_model.init_state])
 
+    one_hot = data.one_hot_from_files()
+
     while True:
         lstm1_outputs = []
         for lstm1_slice in range(2):
             rnn_outputs = []
             for rnn_slice in range(6):
-                x = next(data)
+                x = next(data_iter)
                 y = np.zeros((59,), dtype=np.float32)
                 rnn_state, rnn_output, rnn_result = session.run(
                     [
@@ -34,7 +36,8 @@ def lstm2_run(session, data, **kwargs):
                     }
                 )
                 rnn_outputs.append(rnn_output)
-                print(rnn_result)
+                classification = data.extract_classification(rnn_result, one_hot)
+                print(classification)
             lstm1_x = np.concatenate(rnn_outputs, axis=0)
             rnn_outputs.clear()
             lstm1_state, lstm1_output, lstm1_result = session.run(
@@ -50,7 +53,8 @@ def lstm2_run(session, data, **kwargs):
                 }
             )
             lstm1_outputs.append(lstm1_output)
-            print(lstm1_result)
+            classification = data.extract_classification(lstm1_result, one_hot)
+            print(classification)
         lstm2_x = np.concatenate(lstm1_outputs, axis=0)
         lstm1_outputs.clear()
         lstm2_state, lstm2_output, lstm2_result = session.run(
@@ -65,7 +69,8 @@ def lstm2_run(session, data, **kwargs):
                 lstm2_model.init_state: lstm2_state
             }
         )
-        print(lstm2_result)
+        classification = data.extract_classification(lstm2_result, one_hot)
+        print(classification)
 
 
 def main():

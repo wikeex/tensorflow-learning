@@ -57,6 +57,10 @@ def split_dataset(basedir):
 
 
 def one_hot_from_files():
+    """
+    将分类名称转换成ont hot编码。
+    :return: 键为分类名称，值为one hot编码列表的字典。
+    """
     files = os.listdir('G:/sound')
     char_list = []
     one_hot = dict()
@@ -69,6 +73,30 @@ def one_hot_from_files():
         x[char_list.index(char)] = 1
         one_hot[char] = x
     return one_hot
+
+
+def extract_classification(output, one_hot):
+    """
+    从模型推理结果中提取分类及概率。
+    :param output:
+    :param one_hot:
+    :return:
+    """
+    classification = [''] * 59
+    for k, v in one_hot.items():
+        classification[v.index(1)] = k
+
+    softmax = output.tolist()[0]
+
+    result = list()
+
+    for i in range(10):
+        max_value = max(softmax)
+        index = softmax.index(max_value)
+        result.append((classification[index], max_value))
+        softmax.pop(index)
+
+    return tuple(result)
 
 
 def mel_batch_generator(slice_size, dest_path, source_path='G:/sound/', fixed=True):
