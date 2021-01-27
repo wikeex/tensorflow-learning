@@ -135,7 +135,7 @@ def main():
             run_epoch(session, train_model, train_data, train_model.train_op, True, train_epoch_size)
 
             valid_accuracy = run_epoch(session, eval_model, valid_data, tf.no_op(), False, valid_epoch_size)
-            with open('./record.txt', 'a') as f:
+            with open('record.txt', 'a') as f:
                 f.write('In iteration: %d\n' % (i + 1))
             print('Epoch: %d Validation Accuracy: %.3f' % (i + 1, valid_accuracy))
 
@@ -143,7 +143,7 @@ def main():
                 saver.save(session, check_point_path)
 
         test_accuracy = run_epoch(session, eval_model, test_data, tf.no_op(), False, test_epoch_size)
-        with open('./record.txt', 'a') as f:
+        with open('record.txt', 'a') as f:
             f.write('In iteration: %d\n' % (i + 1))
         print('Test Accuracy: %.3f' % test_accuracy)
 

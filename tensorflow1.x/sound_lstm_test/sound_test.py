@@ -25,7 +25,7 @@ def run_epoch(session, model, data, train_op, output_log, epoch_size):
         total_accuracy += accuracy
 
         if output_log and step % 100 == 0:
-            with open('./recode.txt', 'a') as f:
+            with open('recode.txt', 'a') as f:
                 f.write('After %d steps, accuracy is %.3f\n' % (step, accuracy))
             print('After %d steps, accuracy is %.3f\n' % (step,  accuracy))
     print(total_accuracy, epoch_size)
@@ -66,13 +66,13 @@ def main():
 
         best_accuracy = 0
         for i in range(NUM_EPOCH):
-            with open('./recode.txt', 'a') as f:
+            with open('recode.txt', 'a') as f:
                 f.write('In iteration: %d\n' % (i + 1))
             print('In iteration: %d' % (i + 1))
             run_epoch(session, train_model, train_data, train_model.optimizer, True, train_epoch_size)
 
             valid_accuracy = run_epoch(session, eval_model, valid_data, tf.no_op(), False, valid_epoch_size)
-            with open('./record.txt', 'a') as f:
+            with open('record.txt', 'a') as f:
                 f.write('In iteration: %d\n' % (i + 1))
             print('Epoch: %d Validation Accuracy: %.3f' % (i + 1, valid_accuracy))
 
@@ -80,7 +80,7 @@ def main():
                 saver.save(session, check_point_path)
 
         test_accuracy = run_epoch(session, eval_model, test_data, tf.no_op(), False, test_epoch_size)
-        with open('./record.txt', 'a') as f:
+        with open('record.txt', 'a') as f:
             f.write('In iteration: %d\n' % (i + 1))
         print('Test Accuracy: %.3f' % test_accuracy)
 

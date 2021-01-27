@@ -120,5 +120,5 @@ model/
 events.*
 
 # record file
-record.txt
+tensorflow1.x/record.txt
 

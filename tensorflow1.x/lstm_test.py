@@ -92,7 +92,7 @@ def run_epoch(session, model, data, train_op, output_log, epoch_size):
         iters += model.num_steps  #
 
         if output_log and step % 100 == 0:
-            with open('./lstm_run_recode.txt', 'a') as f:
+            with open('lstm_run_recode.txt', 'a') as f:
                 f.write('After %d steps, perplexity is %.3f\n' % (step, np.exp(total_costs / iters)))
             print('After %d steps, perplexity is %.3f' % (step, np.exp(total_costs / iters)))
     return np.exp(total_costs / iters)  # 计算混乱度
@@ -130,18 +130,18 @@ def main():
         threads = tf.train.start_queue_runners(sess=session, coord=coord)  # 启动多线程
 
         for i in range(NUM_EPOCH):
-            with open('./lstm_run_recode.txt', 'a') as f:
+            with open('lstm_run_recode.txt', 'a') as f:
                 f.write('In iteration: %d\n' % (i + 1))
             print('In iteration: %d' % (i + 1))
             run_epoch(session, train_model, train_queue, train_model.train_op, True, train_epoch_size)  # 训练模型
 
             valid_perplexity = run_epoch(session, eval_model, eval_queue, tf.no_op(), False, valid_epoch_size)  # 评估
-            with open('./lstm_run_recode.txt', 'a') as f:
+            with open('lstm_run_recode.txt', 'a') as f:
                 f.write('In iteration: %d\n' % (i + 1))
             print('Epoch: %d Validation Perplexity: %.3f' % (i + 1, valid_perplexity))
 
         test_perplexity = run_epoch(session, eval_model, test_queue, tf.no_op(), False, test_epoch_size)  # 测试
-        with open('./lstm_run_recode.txt', 'a') as f:
+        with open('lstm_run_recode.txt', 'a') as f:
             f.write('In iteration: %d\n' % (i + 1))
         print('Test Perplexity: %.3f' % test_perplexity)
 
